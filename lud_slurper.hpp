@@ -7,6 +7,7 @@
 #include <optional>
 
 #include <fstream>
+#include <filesystem>
 
 #include <vector>
 #include <bit>
@@ -80,7 +81,7 @@ public:
 
 private:
 	std::ifstream m_file;
-	std::ios_base::openmode m_mode;
+	std::ios_base::openmode m_mode{};
 
 };
 }
@@ -141,6 +142,9 @@ inline Slurper& Lud::Slurper::Open(const std::string_view& filename, const std::
 	if (IsOpen()) {
 		Close();
 	}
+	if (!std::filesystem::exists(filename)) {
+		throw std::runtime_error("File does not exist");
+	}
 	m_file.open(std::string(filename), mode);
 	return *this;
 }
@@ -149,6 +153,9 @@ inline Slurper& Lud::Slurper::Open(const std::string& filename, const std::ios_b
 	if (IsOpen()) {
 		Close();
 	}
+	if (!std::filesystem::exists(filename)) {
+		throw std::runtime_error("File does not exist");
+	}
 	m_file.open(filename, mode);
 	return *this;
 } 
@@ -156,6 +163,9 @@ inline Slurper& Lud::Slurper::Open(const char* filename, const std::ios_base::op
 { 
 	if (IsOpen()) {
 		Close();
+	}
+	if (!std::filesystem::exists(filename)) {
+		throw std::runtime_error("File does not exist");
 	}
 	m_file.open(filename, mode);
 	return *this;
@@ -263,7 +273,7 @@ inline std::vector<T> Slurper::ReadTo()
 	size_t file_size = static_cast<size_t>(Where());
 	std::vector<T> buffer(file_size / sizeof(T));
 	Move(0);
-	m_file.read(reinterpret_cast<char*>(buffer.data()), file_size);
+	m_file.read(std::bit_cast<char*>(buffer.data()), file_size);
 	
 	return buffer;
 }

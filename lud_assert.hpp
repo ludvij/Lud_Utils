@@ -17,7 +17,7 @@ namespace Lud::assert {
 	code \
 	std::cout.rdbuf(lud_assert_old_cout); \
 	std::cerr.rdbuf(lud_assert_old_cerr); \
-	std::cerr.rdbuf(lud_assert_old_clog); \
+	std::cerr.rdbuf(lud_assert_old_clog)
 
 #define assert_no_print(assert_type, v1, v2) NO_PRINT(Lud::assert::##assert_type(v2, v2);)
 
