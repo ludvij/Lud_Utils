@@ -4,7 +4,6 @@
 #include <ostream>
 #include <string_view>
 #include <string>
-#include <optional>
 
 #include <fstream>
 #include <filesystem>
@@ -35,20 +34,18 @@ public:
 
 	// reads a single line
 	std::string ReadLine();
-	// reads n chars, returns nullopt if not enough space
-	std::optional<std::string> Read(size_t chars);
 
-	// reads size of structure from file
-	template<class T> std::optional<T> ReadStructure();
-	// reads size of structure from fiel to provided structure
-	template<class T> void ReadToStructure(T& t);
+	// reads size of structure from file to provided structure
+	template<typename T> Slurper& ReadChunk(T& t);
+	Slurper& Read(char* data, size_t size);
+
 
 	// returns current pos in file
 	size_t Where();
 	// moves current file pos to provided pos
-	Slurper& Move(size_t pos);
+	Slurper& Move(std::streamoff pos);
 	// moves current file pos by an offset in a direction
-	Slurper& Move(size_t offset, std::ios_base::seekdir dir);
+	Slurper& Move(std::streamoff offset, std::ios_base::seekdir dir);
 
 	// returns file pointer to pos 0
 	Slurper& Reset();
@@ -66,8 +63,7 @@ public:
 	static std::vector<std::string> Slurp(const std::string& filename, std::ios_base::openmode mode = std::ios_base::in);
 	static std::vector<std::string> Slurp(const char* filename, std::ios_base::openmode mode = std::ios_base::in);
 
-
-	// reads whole file to char vector
+	// reads whole file to T vector
 	template<typename T> std::vector<T> ReadTo();
 
 	template<typename T> static std::vector<T> SlurpTo(const std::string_view& filename, std::ios_base::openmode mode = std::ios_base::in);
@@ -142,9 +138,6 @@ inline Slurper& Lud::Slurper::Open(const std::string_view& filename, const std::
 	if (IsOpen()) {
 		Close();
 	}
-	if (!std::filesystem::exists(filename)) {
-		throw std::runtime_error("File does not exist");
-	}
 	m_file.open(std::string(filename), mode);
 	return *this;
 }
@@ -153,9 +146,6 @@ inline Slurper& Lud::Slurper::Open(const std::string& filename, const std::ios_b
 	if (IsOpen()) {
 		Close();
 	}
-	if (!std::filesystem::exists(filename)) {
-		throw std::runtime_error("File does not exist");
-	}
 	m_file.open(filename, mode);
 	return *this;
 } 
@@ -163,9 +153,6 @@ inline Slurper& Lud::Slurper::Open(const char* filename, const std::ios_base::op
 { 
 	if (IsOpen()) {
 		Close();
-	}
-	if (!std::filesystem::exists(filename)) {
-		throw std::runtime_error("File does not exist");
 	}
 	m_file.open(filename, mode);
 	return *this;
@@ -190,35 +177,11 @@ inline void Slurper::Close()
 	m_file.close();
 }
 
-inline std::optional<std::string> Slurper::Read(const size_t chars)
+template<class T> Slurper& Slurper::ReadChunk(T& t)
 {
-	if (!HasSpace(chars)) {
-		return std::nullopt;
-	}
-	char* buffer = new char[chars];
+	Read(std::bit_cast<char*>(&t), sizeof(t));
 
-	m_file.read(buffer, chars);
-	std::string text(buffer);
-
-	delete[] buffer;
-
-	return text;
-}
-
-template<class T> std::optional<T> Slurper::ReadStructure()
-{
-	T t;
-	if (!HasSpace(sizeof(t))) {
-		return std::nullopt;
-	}
-	ReadToStructure<T>(t);
-	return t;
-
-}
-
-template<class T> void Slurper::ReadToStructure(T& t)
-{
-	m_file.read(std::bit_cast<char*>(&t), sizeof(t));
+	return *this;
 }
 
 inline std::string Slurper::ReadLine()
@@ -239,18 +202,23 @@ inline std::vector<std::string> Slurper::ReadLines()
 	return lines;
 }
 
-inline size_t Slurper::Where()  
+inline Slurper &Slurper::Read(char *data, size_t size)
+{
+	m_file.read(data, size);
+}
+
+inline size_t Slurper::Where()
 {
 	return m_file.tellg();
 }
 
-inline Slurper& Slurper::Move(const size_t pos)
+inline Slurper& Slurper::Move(const std::streamoff pos)
 {
 	m_file.seekg(pos);
 	return *this;
 }
 
-inline Slurper& Slurper::Move(const size_t offset, const std::ios_base::seekdir dir)
+inline Slurper& Slurper::Move(const std::streamoff offset, const std::ios_base::seekdir dir)
 {
 	m_file.seekg(offset, dir);
 	return *this;
@@ -261,6 +229,7 @@ inline bool Slurper::HasSpace(const size_t size)
 	const size_t current = Where();
 	Move(0, std::ios::end);
 	const size_t length = Where();
+	Move(current);
 
 	return size < length - current;
 }
@@ -270,7 +239,7 @@ inline std::vector<T> Slurper::ReadTo()
 {
 	if (!(m_mode & std::ios::ate))
 		Move(0, std::ios::end);
-	size_t file_size = static_cast<size_t>(Where());
+	const size_t file_size = static_cast<size_t>(Where());
 	std::vector<T> buffer(file_size / sizeof(T));
 	Move(0);
 	m_file.read(std::bit_cast<char*>(buffer.data()), file_size);
