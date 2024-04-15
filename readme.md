@@ -5,7 +5,7 @@ This 'library' is meant for my own use and I don't promise code of any quality  
 Its inception came from me being tired of using fstream and reading some dude in stack overflow refering to 
 reading a whole file as slurping it.
 
-Then assert, parser and vec2 came as I was doint Advent of Code 2023.
+Then assert and parser  came as I was doint Advent of Code 2023.
 
 ## Usage
 
@@ -22,14 +22,6 @@ The whole library is contained in ```Lud``` namespace, they are single header li
 
 ```c++
 #import "lud_assert.hpp" // import just assert
-```
-
-```c++
-#import "lud_vec2.hpp" // import just vec2
-```
-
-```c++
-#import "lud_types.hpp" // import just types
 ```
 
 
