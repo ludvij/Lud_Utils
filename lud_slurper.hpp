@@ -251,6 +251,10 @@ template<typename T>
 inline std::vector<T> Slurper::SlurpTo(const char* filename, std::ios_base::openmode mode)
 {
 	Slurper file(filename, mode | std::ios::ate);
+	if (!file.is_open())
+	{
+		throw std::runtime_error("File not found");
+	}
 	return file.ReadTo<T>();
 }
 
