@@ -2,6 +2,9 @@
 #define LUD_ASSERT_HEADER
 
 
+#include <fcntl.h>
+#include <stdio.h>
+
 #include <cstdlib>
 #include <format>
 #include <functional>
@@ -12,7 +15,20 @@
 
 
 // hacky workaround when there are a lot of prints
-#define NO_PRINT(code) \
+
+#define CAPTURE_STDOUT(code) \
+do {\
+	fflush(stdout); \
+	int stdout_fd = dup(fileno(stdout)); \
+	int redir_fd = open("redirected_stdout", O_WRONLY); \
+	dup2(redir_fd, fileno(stdout)); \
+	close(redir_fd); \
+	code; \
+	fflush(stdout); \
+	dup2(stdout_fd, fileno(stdout)); \
+	close(stdout_fd); \
+} while (0)
+#define CAPTURE_COUT(code) \
 do { \
 	std::streambuf *lud_assert_old_cout = std::cout.rdbuf(); std::stringstream lud_assert_ss_cout; std::cout.rdbuf(lud_assert_ss_cout.rdbuf()); \
 	std::streambuf *lud_assert_old_cerr = std::cerr.rdbuf(); std::stringstream lud_assert_ss_cerr; std::cerr.rdbuf(lud_assert_ss_cerr.rdbuf()); \
@@ -22,23 +38,28 @@ do { \
 	std::cerr.rdbuf(lud_assert_old_cerr); \
 	std::cerr.rdbuf(lud_assert_old_clog); \
 } while (0) 
+#define NO_PRINT(code) CAPTURE_STDOUT(code)
+
 
 #define assert_no_print(assert_type, ...) NO_PRINT(Lud::assert::##assert_type(__VA_ARGS__))
 #define check_no_print(check_type, ...) NO_PRINT(Lud::check::##check_type(__VA_ARGS__))
+
+
 
 #if !defined(NDEBUG) 
 
 namespace Lud::assert
 {
 
-inline void eq(bool expr, const std::source_location loc = std::source_location::current());
-template<class T1, class T2> void eq(T1 n1, T2 n2, const std::source_location loc = std::source_location::current());
-template<class T1, class T2> void ne(T1 n1, T2 n2, const std::source_location loc = std::source_location::current());
-template<class T1, class T2> void greater(T1 n1, T2 n2, const std::source_location loc = std::source_location::current());
-template<class T1, class T2> void lower(T1 n1, T2 n2, const std::source_location loc = std::source_location::current());
-template<class T1, class T2> void geq(T1 n1, T2 n2, const std::source_location loc = std::source_location::current());
-template<class T1, class T2> void leq(T1 n1, T2 n2, const std::source_location loc = std::source_location::current());
-template<class Min, class T, class Max> void range(Min min, T val, Max max, const std::source_location loc = std::source_location::current());
+inline bool eq(bool expr, const std::string& msg= "", const std::source_location loc = std::source_location::current());
+inline bool that(bool expr, const std::string& msg= "", const std::source_location loc = std::source_location::current());
+template<class T1, class T2> bool eq(T1 n1, T2 n2, const std::string& msg= "", const std::source_location loc = std::source_location::current());
+template<class T1, class T2> bool ne(T1 n1, T2 n2, const std::string& msg= "", const std::source_location loc = std::source_location::current());
+template<class T1, class T2> bool greater(T1 n1, T2 n2, const std::string& msg= "", const std::source_location loc = std::source_location::current());
+template<class T1, class T2> bool lower(T1 n1, T2 n2, const std::string& msg= "", const std::source_location loc = std::source_location::current());
+template<class T1, class T2> bool geq(T1 n1, T2 n2, const std::string& msg= "", const std::source_location loc = std::source_location::current());
+template<class T1, class T2> bool leq(T1 n1, T2 n2, const std::string& msg= "", const std::source_location loc = std::source_location::current());
+template<class Min, class T, class Max> bool range(Min min, T val, Max max, const std::string& msg= "", const std::source_location loc = std::source_location::current());
 
 }
 #endif
@@ -46,14 +67,14 @@ template<class Min, class T, class Max> void range(Min min, T val, Max max, cons
 namespace Lud::check
 {
 
-inline void eq(bool expr, const std::string & = "The expression evaluated to false");
-template<class T1, class T2> void eq(T1 n1, T2 n2, const std::string & = "passed arguments are not the same");
-template<class T1, class T2> void ne(T1 n1, T2 n2, const std::string & = "passed arguments are the same");
-template<class T1, class T2> void greater(T1 n1, T2 n2, const std::string & = "n1 is not greater than n2");
-template<class T1, class T2> void lower(T1 n1, T2 n2, const std::string & = "n1 is not lower than n2");
-template<class T1, class T2> void geq(T1 n1, T2 n2, const std::string & = "n1 is lower than n2");
-template<class T1, class T2> void leq(T1 n1, T2 n2, const std::string & = "n1 is greater than n2");
-template<class Min, class T, class Max> void range(Min min, T val, Max max, const std::string & = "val is not in range [min, max)");
+inline void eq(bool expr, const std::string& msg = "The expression evaluated to false");
+template<class T1, class T2> void eq(T1 n1, T2 n2, const std::string& msg = "passed arguments are not the same");
+template<class T1, class T2> void ne(T1 n1, T2 n2, const std::string& msg = "passed arguments are the same");
+template<class T1, class T2> void greater(T1 n1, T2 n2, const std::string& msg = "n1 is not greater than n2");
+template<class T1, class T2> void lower(T1 n1, T2 n2, const std::string& msg = "n1 is not lower than n2");
+template<class T1, class T2> void geq(T1 n1, T2 n2, const std::string& msg = "n1 is lower than n2");
+template<class T1, class T2> void leq(T1 n1, T2 n2, const std::string& msg = "n1 is greater than n2");
+template<class Min, class T, class Max> void range(Min min, T val, Max max, const std::string& msg = "val is not in range [min, max)");
 
 }
 
@@ -139,7 +160,14 @@ static inline void psnip_trap(void)
 #endif
 
 
-#define LUD_ASSERT_TRAP() psnip_trap()
+#define LUD_ASSERT_TRAP() std::abort();
+
+#define assert_trap(assert_type, ...) \
+if (!Lud::assert::##assert_type(__VA_ARGS__))  \
+{\
+	LUD_ASSERT_TRAP(); \
+}
+
 
 
 namespace Lud::Detail
@@ -157,84 +185,109 @@ inline void log_fail(const std::source_location loc, Args&&... args)
 
 namespace Lud::assert
 {
-inline void eq(bool expr, const std::source_location loc)
+inline bool that(bool expr, const std::string& msg, const std::source_location loc)
 {
-	if (expr) return;
+	return eq(expr, msg, loc);
+}
+inline bool eq(bool expr, const std::string& msg, const std::source_location loc)
+{
+	if (expr) return true;
 
-	Detail::log_fail(loc, "The expression evaluated to false");
+	if (msg.empty())
+		Detail::log_fail(loc, "The expression evaluated to false");
+	else
+		Detail::log_fail(loc, msg);
 
-	LUD_ASSERT_TRAP();
+	return false;
 
 }
 
 template<class T1, class T2>
-inline void eq(T1 n1, T2 n2, const std::source_location loc)
+inline bool eq(T1 n1, T2 n2, const std::string& msg, const std::source_location loc)
 {
-	if (n1 == n2) return;
+	if (n1 == n2) return true;
 
-	Detail::log_fail(loc, n1, " != ", n2);
+	if (msg.empty())
+		Detail::log_fail(loc, n1, " != ", n2);
+	else
+		Detail::log_fail(loc, msg);
 
-	LUD_ASSERT_TRAP();
+	return false;
 }
 
 template<class T1, class T2>
-inline void ne(T1 n1, T2 n2, const std::source_location loc)
+inline bool ne(T1 n1, T2 n2, const std::string& msg, const std::source_location loc)
 {
-	if (n1 != n2) return;
+	if (n1 != n2) return true;
+	if (msg.empty())
+		Detail::log_fail(loc, n1, " == ", n2);
+	else
+		Detail::log_fail(loc, msg);
 
-	Detail::log_fail(loc, n1, " == ", n2);
-
-	LUD_ASSERT_TRAP();
+	return false;
 }
 
 template<class T1, class T2>
-inline void greater(T1 n1, T2 n2, const std::source_location loc)
+inline bool greater(T1 n1, T2 n2, const std::string& msg, const std::source_location loc)
 {
-	if (n1 > n2) return;
+	if (n1 > n2) return true;
 
-	Detail::log_fail(loc, n1, " is not greater than ", n2);
+	if (msg.empty())
+		Detail::log_fail(loc, n1, " is not greater than ", n2);
+	else
+		Detail::log_fail(loc, msg);
 
-	LUD_ASSERT_TRAP();
+	return false;
 }
 
 template<class T1, class T2>
-inline void lower(T1 n1, T2 n2, const std::source_location loc)
+inline bool lower(T1 n1, T2 n2, const std::string& msg, const std::source_location loc)
 {
-	if (n1 < n2) return;
+	if (n1 < n2) return true;
 
-	Detail::log_fail(loc, n1, " is not lower than ", n2);
+	if (msg.empty())
+		Detail::log_fail(loc, n1, " is not lower than ", n2);
+	else
+		Detail::log_fail(loc, msg);
 
-	LUD_ASSERT_TRAP();
+	return false;
 }
 
 template<class T1, class T2>
-inline void geq(T1 n1, T2 n2, const std::source_location loc)
+inline bool geq(T1 n1, T2 n2, const std::string& msg, const std::source_location loc)
 {
-	if (n1 >= n2) return;
+	if (n1 >= n2) return true;
 
-	Detail::log_fail(loc, n1, " is not greater or equal to ", n2);
+	if (msg.empty())
+		Detail::log_fail(loc, n1, " is not greater or equal to ", n2);
+	else
+		Detail::log_fail(loc, msg);
 
-	LUD_ASSERT_TRAP();
+	return false;
 }
 
 template<class T1, class T2>
-inline void leq(T1 n1, T2 n2, const std::source_location loc)
+inline bool leq(T1 n1, T2 n2, const std::string& msg, const std::source_location loc)
 {
-	if (n1 <= n2) return;
+	if (n1 <= n2) return true;
+	if (msg.empty())
+		Detail::log_fail(loc, n1, " is not lower or equal to ", n2);
+	else
+		Detail::log_fail(loc, msg);
 
-	Detail::log_fail(loc, n1, " is not lower or equal to ", n2);
-
-	LUD_ASSERT_TRAP();
+	return false;
 }
 
 template<class Min, class T, class Max>
-inline void range(Min min, T val, Max max, const std::source_location loc)
+inline bool range(Min min, T val, Max max, const std::string& msg, const std::source_location loc)
 {
-	if (min <= val && val < max) return;
+	if (min <= val && val < max) return true;
+	if (msg.empty())
+		Detail::log_fail(loc, val, " is not in the range [", min, ", ", max, ")");
+	else
+		Detail::log_fail(loc, msg);
 
-	Detail::log_fail(loc, val, " is not in the range [", min, ", ", max, ")");
-
-	LUD_ASSERT_TRAP();
+	return false;
 }
 
 }
@@ -242,38 +295,48 @@ inline void range(Min min, T val, Max max, const std::source_location loc)
 
 
 #else
+#define assert_trap(assert_type, ...) 
+
 namespace Lud::assert
 {
-constexpr inline void eq(bool expr)
+constexpr inline bool eq(bool expr, const std::string& msg="")
 {
+	return true;
 }
 template<class T1, class T2>
-constexpr inline void eq(T1 n1, T2 n2)
+constexpr inline bool eq(T1 n1, T2 n2, const std::string& msg="")
 {
+	return true;
 }
 template<class T1, class T2>
-constexpr inline void ne(T1 n1, T2 n2)
+constexpr inline bool ne(T1 n1, T2 n2, const std::string& msg="")
 {
+	return true;
 }
 template<class T1, class T2>
-constexpr inline void greater(T1 n1, T2 n2)
+constexpr inline bool greater(T1 n1, T2 n2, const std::string& msg="")
 {
+	return true;
 }
 template<class T1, class T2>
-constexpr inline void lower(T1 n1, T2 n2)
+constexpr inline bool lower(T1 n1, T2 n2, const std::string& msg="")
 {
+	return true;
 }
 template<class T1, class T2>
-constexpr inline void geq(T1 n1, T2 n2)
+constexpr inline bool geq(T1 n1, T2 n2, const std::string& msg="")
 {
+	return true;
 }
 template<class T1, class T2>
-constexpr inline void leq(T1 n1, T2 n2)
+constexpr inline bool leq(T1 n1, T2 n2, const std::string& msg="")
 {
+	return true;
 }
 template<class Min, class T, class Max>
-constexpr inline void range(Min min, T val, Max max)
+constexpr inline bool range(Min min, T val, Max max, const std::string& msg="")
 {
+	return true;
 }
 }
 
