@@ -160,7 +160,7 @@ static inline void psnip_trap(void)
 #endif
 
 
-#define LUD_ASSERT_TRAP() std::abort();
+#define LUD_ASSERT_TRAP() psnip_trap()
 
 #define assert_trap(assert_type, ...) \
 if (!Lud::assert::##assert_type(__VA_ARGS__))  \
@@ -174,11 +174,13 @@ namespace Lud::Detail
 {
 
 template <typename... Args>
-inline void log_fail(const std::source_location loc, Args&&... args)
+inline void fail(const std::source_location loc, Args&&... args)
 {
 	std::clog << "[ASSERT FAIL] " << loc.file_name() << '(' << loc.line() << ':' << loc.column() << ")\n";
 	std::clog << "              ";
 	( std::clog << ... << args ) << '\n';
+
+	LUD_ASSERT_TRAP();
 }
 
 }
@@ -194,9 +196,9 @@ inline bool eq(bool expr, const std::string& msg, const std::source_location loc
 	if (expr) return true;
 
 	if (msg.empty())
-		Detail::log_fail(loc, "The expression evaluated to false");
+		Detail::fail(loc, "The expression evaluated to false");
 	else
-		Detail::log_fail(loc, msg);
+		Detail::fail(loc, msg);
 
 	return false;
 
@@ -208,9 +210,9 @@ inline bool eq(T1 n1, T2 n2, const std::string& msg, const std::source_location 
 	if (n1 == n2) return true;
 
 	if (msg.empty())
-		Detail::log_fail(loc, n1, " != ", n2);
+		Detail::fail(loc, n1, " != ", n2);
 	else
-		Detail::log_fail(loc, msg);
+		Detail::fail(loc, msg);
 
 	return false;
 }
@@ -220,9 +222,9 @@ inline bool ne(T1 n1, T2 n2, const std::string& msg, const std::source_location 
 {
 	if (n1 != n2) return true;
 	if (msg.empty())
-		Detail::log_fail(loc, n1, " == ", n2);
+		Detail::fail(loc, n1, " == ", n2);
 	else
-		Detail::log_fail(loc, msg);
+		Detail::fail(loc, msg);
 
 	return false;
 }
@@ -233,9 +235,9 @@ inline bool greater(T1 n1, T2 n2, const std::string& msg, const std::source_loca
 	if (n1 > n2) return true;
 
 	if (msg.empty())
-		Detail::log_fail(loc, n1, " is not greater than ", n2);
+		Detail::fail(loc, n1, " is not greater than ", n2);
 	else
-		Detail::log_fail(loc, msg);
+		Detail::fail(loc, msg);
 
 	return false;
 }
@@ -246,9 +248,9 @@ inline bool lower(T1 n1, T2 n2, const std::string& msg, const std::source_locati
 	if (n1 < n2) return true;
 
 	if (msg.empty())
-		Detail::log_fail(loc, n1, " is not lower than ", n2);
+		Detail::fail(loc, n1, " is not lower than ", n2);
 	else
-		Detail::log_fail(loc, msg);
+		Detail::fail(loc, msg);
 
 	return false;
 }
@@ -259,9 +261,9 @@ inline bool geq(T1 n1, T2 n2, const std::string& msg, const std::source_location
 	if (n1 >= n2) return true;
 
 	if (msg.empty())
-		Detail::log_fail(loc, n1, " is not greater or equal to ", n2);
+		Detail::fail(loc, n1, " is not greater or equal to ", n2);
 	else
-		Detail::log_fail(loc, msg);
+		Detail::fail(loc, msg);
 
 	return false;
 }
@@ -271,9 +273,9 @@ inline bool leq(T1 n1, T2 n2, const std::string& msg, const std::source_location
 {
 	if (n1 <= n2) return true;
 	if (msg.empty())
-		Detail::log_fail(loc, n1, " is not lower or equal to ", n2);
+		Detail::fail(loc, n1, " is not lower or equal to ", n2);
 	else
-		Detail::log_fail(loc, msg);
+		Detail::fail(loc, msg);
 
 	return false;
 }
@@ -283,9 +285,9 @@ inline bool range(Min min, T val, Max max, const std::string& msg, const std::so
 {
 	if (min <= val && val < max) return true;
 	if (msg.empty())
-		Detail::log_fail(loc, val, " is not in the range [", min, ", ", max, ")");
+		Detail::fail(loc, val, " is not in the range [", min, ", ", max, ")");
 	else
-		Detail::log_fail(loc, msg);
+		Detail::fail(loc, msg);
 
 	return false;
 }
