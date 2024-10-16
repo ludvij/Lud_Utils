@@ -25,7 +25,7 @@ template<NumberType N> N parse_num(std::string_view sv, int base=10);
 
 template<NumberType N> N parse_num(std::string_view sv, int base/*=10*/)
 {
-	N val = 0;
+	N val{};
 	std::from_chars(sv.data(), sv.data() + sv.size(), val, base);
 	return val;
 }
