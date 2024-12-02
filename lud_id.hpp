@@ -1,7 +1,9 @@
 #ifndef LUD_UTILS_UUID_HEADER
 #define LUD_UTILS_UUID_HEADER
+#define TRACE_UUID_LIFETIMES
 
 #include <cstdint>
+#include <format>
 #include <string>
 
 namespace Lud
@@ -11,6 +13,7 @@ class UUID
 public:
 	UUID();
 	UUID(const UUID& id);
+	UUID(UUID&& id) noexcept;
 	~UUID();
 
 
@@ -24,30 +27,40 @@ private:
 };
 
 using uuid_t = UUID;
+
 }
-
-
+template <>
+struct std::formatter<Lud::uuid_t> : std::formatter<std::string>
+{
+	template<typename FormatContext>
+	auto format(Lud::uuid_t id, FormatContext& ctx) const
+	{
+		return std::format_to(ctx.out(), "[{:s}]", to_string(id));
+	}
+};
 
 
 // implementation
-#include <format>
 #include <print>
 #include <random>
+namespace Lud
+{
+namespace Detail
+{
 
 static std::random_device rnd_dev;
 static std::mt19937_64 mt(rnd_dev());
 static std::uniform_int_distribution<uint64_t> dist;
 
-namespace Lud
-{
+}
 
 inline UUID::UUID()
-	: m_lo(dist(mt))
-	, m_hi(dist(mt))
+	: m_lo(Detail::dist(Detail::mt))
+	, m_hi(Detail::dist(Detail::mt))
 {
 #ifdef TRACE_UUID_LIFETIMES
 	std::println("Created UUID {{\033[38;5;46m{:s}\033[31;1;0m}}", to_string(*this));
-#endif
+#endif//TRACE_UUID_LIFETIMES
 }
 
 inline UUID::UUID(const UUID& id)
@@ -56,14 +69,23 @@ inline UUID::UUID(const UUID& id)
 {
 #ifdef TRACE_UUID_LIFETIMES
 	std::println("Copied UUID {{\033[38;5;46m{:s}\033[31;1;0m}}", to_string(*this));
-#endif
+#endif//TRACE_UUID_LIFETIMES
+}
+
+inline UUID::UUID(UUID&& id) noexcept
+	: m_lo(std::move(id.m_lo))
+	, m_hi(std::move(id.m_hi))
+{
+#ifdef TRACE_UUID_LIFETIMES
+	std::println("Moved UUID {{\033[38;5;126m{:s}\033[31;1;0m}}", to_string(*this));
+#endif//TRACE_UUID_LIFETIMES
 }
 
 inline UUID::~UUID()
 {
 #ifdef TRACE_UUID_LIFETIMES
 	std::println("Deleted UUID {{\033[38;5;196m{:s}\033[31;1;0m}}", to_string(*this));
-#endif TRACE_UUID_LIFETIMES
+#endif//TRACE_UUID_LIFETIMES
 }
 
 inline std::string to_string(const UUID& id)
