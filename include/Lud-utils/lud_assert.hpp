@@ -2,10 +2,10 @@
 #define LUD_ASSERT_HEADER
 
 
-#include <fcntl.h>
-#include <stdio.h>
-
+#include <cstdio>
 #include <cstdlib>
+#include <fcntl.h>
+
 #include <format>
 #include <functional>
 #include <iostream>
@@ -51,15 +51,15 @@ do { \
 namespace Lud::assert
 {
 
-inline bool eq(bool expr, const std::string& msg= "", const std::source_location loc = std::source_location::current());
-inline bool that(bool expr, const std::string& msg= "", const std::source_location loc = std::source_location::current());
-template<class T1, class T2> bool eq(T1 n1, T2 n2, const std::string& msg= "", const std::source_location loc = std::source_location::current());
-template<class T1, class T2> bool ne(T1 n1, T2 n2, const std::string& msg= "", const std::source_location loc = std::source_location::current());
-template<class T1, class T2> bool greater(T1 n1, T2 n2, const std::string& msg= "", const std::source_location loc = std::source_location::current());
-template<class T1, class T2> bool lower(T1 n1, T2 n2, const std::string& msg= "", const std::source_location loc = std::source_location::current());
-template<class T1, class T2> bool geq(T1 n1, T2 n2, const std::string& msg= "", const std::source_location loc = std::source_location::current());
-template<class T1, class T2> bool leq(T1 n1, T2 n2, const std::string& msg= "", const std::source_location loc = std::source_location::current());
-template<class Min, class T, class Max> bool range(Min min, T val, Max max, const std::string& msg= "", const std::source_location loc = std::source_location::current());
+inline void eq(bool expr, const std::string_view msg= "", const std::source_location loc = std::source_location::current());
+inline void that(bool expr, const std::string_view msg= "", const std::source_location loc = std::source_location::current());
+template<class T1, class T2> void eq(T1 n1, T2 n2, const std::string_view msg= "", const std::source_location loc = std::source_location::current());
+template<class T1, class T2> void ne(T1 n1, T2 n2, const std::string_view msg= "", const std::source_location loc = std::source_location::current());
+template<class T1, class T2> void gt(T1 n1, T2 n2, const std::string_view msg= "", const std::source_location loc = std::source_location::current());
+template<class T1, class T2> void lt(T1 n1, T2 n2, const std::string_view msg= "", const std::source_location loc = std::source_location::current());
+template<class T1, class T2> void geq(T1 n1, T2 n2, const std::string_view msg= "", const std::source_location loc = std::source_location::current());
+template<class T1, class T2> void leq(T1 n1, T2 n2, const std::string_view msg= "", const std::source_location loc = std::source_location::current());
+template<class Min, class T, class Max> void range(Min min, T val, Max max, const std::string_view msg= "", const std::source_location loc = std::source_location::current());
 
 }
 #endif
@@ -67,14 +67,14 @@ template<class Min, class T, class Max> bool range(Min min, T val, Max max, cons
 namespace Lud::check
 {
 
-inline void eq(bool expr, const std::string& msg = "The expression evaluated to false");
-template<class T1, class T2> void eq(T1 n1, T2 n2, const std::string& msg = "passed arguments are not the same");
-template<class T1, class T2> void ne(T1 n1, T2 n2, const std::string& msg = "passed arguments are the same");
-template<class T1, class T2> void greater(T1 n1, T2 n2, const std::string& msg = "n1 is not greater than n2");
-template<class T1, class T2> void lower(T1 n1, T2 n2, const std::string& msg = "n1 is not lower than n2");
-template<class T1, class T2> void geq(T1 n1, T2 n2, const std::string& msg = "n1 is lower than n2");
-template<class T1, class T2> void leq(T1 n1, T2 n2, const std::string& msg = "n1 is greater than n2");
-template<class Min, class T, class Max> void range(Min min, T val, Max max, const std::string& msg = "val is not in range [min, max)");
+inline void eq(bool expr, const std::string_view msg = "The expression evaluated to false");
+template<class T1, class T2> void eq(T1 n1, T2 n2, const std::string_view msg = "passed arguments are not the same");
+template<class T1, class T2> void ne(T1 n1, T2 n2, const std::string_view msg = "passed arguments are the same");
+template<class T1, class T2> void gt(T1 n1, T2 n2, const std::string_view msg = "n1 is not greater than n2");
+template<class T1, class T2> void lt(T1 n1, T2 n2, const std::string_view msg = "n1 is not lower than n2");
+template<class T1, class T2> void geq(T1 n1, T2 n2, const std::string_view msg = "n1 is lower than n2");
+template<class T1, class T2> void leq(T1 n1, T2 n2, const std::string_view msg = "n1 is greater than n2");
+template<class Min, class T, class Max> void range(Min min, T val, Max max, const std::string_view msg = "val is not in range [min, max)");
 
 }
 
@@ -162,134 +162,133 @@ static inline void psnip_trap(void)
 
 #define LUD_ASSERT_TRAP() psnip_trap()
 
-#define assert_trap(assert_type, ...) \
-if (!Lud::assert::##assert_type(__VA_ARGS__))  \
-{\
-	LUD_ASSERT_TRAP(); \
-}
-
-
 
 namespace Lud::Detail
 {
 
-template <typename... Args>
-inline void fail(const std::source_location loc, Args&&... args)
-{
-	std::clog << "[ASSERT FAIL] " << loc.file_name() << '(' << loc.line() << ':' << loc.column() << ")\n";
-	std::clog << "              ";
-	( std::clog << ... << args ) << '\n';
 
-	LUD_ASSERT_TRAP();
+template <typename... Args>
+inline void log_fail(const std::source_location loc, std::string_view name, std::string_view msg, Args&&... args)
+{
+	std::cout << "[ASSERT FAIL] " << loc.file_name() << "(" << loc.line() << ", " << loc.column() << ")\n";
+	std::cout << std::vformat("{: >13s} → ", std::make_format_args(name)) << std::vformat(msg, std::make_format_args(args...)) << '\n';
 }
 
 }
 
 namespace Lud::assert
 {
-inline bool that(bool expr, const std::string& msg, const std::source_location loc)
+inline void that(bool expr, const std::string_view msg, const std::source_location loc)
 {
-	return eq(expr, msg, loc);
-}
-inline bool eq(bool expr, const std::string& msg, const std::source_location loc)
-{
-	if (expr) return true;
+	if (expr) return;
 
 	if (msg.empty())
-		Detail::fail(loc, "The expression evaluated to false");
+		Detail::log_fail(loc, "ASSERTION", "The expression evaluated to false");
 	else
-		Detail::fail(loc, msg);
+		Detail::log_fail(loc, "ASSERTION", msg);
 
-	return false;
+	LUD_ASSERT_TRAP();
+}
+inline void eq(bool expr, const std::string_view msg, const std::source_location loc)
+{
+	if (expr) return;
+
+	if (msg.empty())
+		Detail::log_fail(loc, "EQUAL", "The expression evaluated to false");
+	else
+		Detail::log_fail(loc, "EQUAL", msg);
+
+	LUD_ASSERT_TRAP();
+}
+
+template<class T1, class T2>
+inline void eq(T1 n1, T2 n2, const std::string_view msg, const std::source_location loc)
+{
+	if (n1 == n2) return;
+
+	if (msg.empty())
+		Detail::log_fail(loc, "EQUAL", "{} ≠ {}", n1, n2);
+	else
+		Detail::log_fail(loc, "EQUAL", msg);
+
+	LUD_ASSERT_TRAP();
 
 }
 
 template<class T1, class T2>
-inline bool eq(T1 n1, T2 n2, const std::string& msg, const std::source_location loc)
+inline void ne(T1 n1, T2 n2, const std::string_view msg, const std::source_location loc)
 {
-	if (n1 == n2) return true;
+	if (n1 != n2) return;
 
 	if (msg.empty())
-		Detail::fail(loc, n1, " != ", n2);
+		Detail::log_fail(loc, "DIFFERENT", "{} = {}", n1, n2);
 	else
-		Detail::fail(loc, msg);
+		Detail::log_fail(loc, "DIFFERENT", msg);
 
-	return false;
+	LUD_ASSERT_TRAP();
 }
 
 template<class T1, class T2>
-inline bool ne(T1 n1, T2 n2, const std::string& msg, const std::source_location loc)
+inline void gt(T1 n1, T2 n2, const std::string_view msg, const std::source_location loc)
 {
-	if (n1 != n2) return true;
-	if (msg.empty())
-		Detail::fail(loc, n1, " == ", n2);
-	else
-		Detail::fail(loc, msg);
+	if (n1 > n2) return;
 
-	return false;
+	if (msg.empty())
+		Detail::log_fail(loc, "GREATER THAN", "{} ≤ {}", n1, n2);
+	else
+		Detail::log_fail(loc, "GREATER THAN", msg);
+
+	LUD_ASSERT_TRAP();
 }
 
 template<class T1, class T2>
-inline bool greater(T1 n1, T2 n2, const std::string& msg, const std::source_location loc)
+inline void lt(T1 n1, T2 n2, const std::string_view msg, const std::source_location loc)
 {
-	if (n1 > n2) return true;
+	if (n1 < n2) return;
 
 	if (msg.empty())
-		Detail::fail(loc, n1, " is not greater than ", n2);
+		Detail::log_fail(loc, "LOWER THAN", "{} ≥ {}", n1, n2);
 	else
-		Detail::fail(loc, msg);
+		Detail::log_fail(loc, "LOWER THAN", msg);
 
-	return false;
+	LUD_ASSERT_TRAP();
 }
 
 template<class T1, class T2>
-inline bool lower(T1 n1, T2 n2, const std::string& msg, const std::source_location loc)
+inline void geq(T1 n1, T2 n2, const std::string_view msg, const std::source_location loc)
 {
-	if (n1 < n2) return true;
+	if (n1 >= n2) return;
 
 	if (msg.empty())
-		Detail::fail(loc, n1, " is not lower than ", n2);
+		Detail::log_fail(loc, "GREATER EQUAL", "{} < {}", n1, n2);
 	else
-		Detail::fail(loc, msg);
+		Detail::log_fail(loc, "GREATER EQUAL", msg);
 
-	return false;
+	LUD_ASSERT_TRAP();
 }
 
 template<class T1, class T2>
-inline bool geq(T1 n1, T2 n2, const std::string& msg, const std::source_location loc)
+inline void leq(T1 n1, T2 n2, const std::string_view msg, const std::source_location loc)
 {
-	if (n1 >= n2) return true;
-
+	if (n1 <= n2) return;
 	if (msg.empty())
-		Detail::fail(loc, n1, " is not greater or equal to ", n2);
+		Detail::log_fail(loc, "LOWER EQUAL", "{} > {} ", n1, n2);
 	else
-		Detail::fail(loc, msg);
+		Detail::log_fail(loc, "LOWER EQUAL", msg);
 
-	return false;
-}
-
-template<class T1, class T2>
-inline bool leq(T1 n1, T2 n2, const std::string& msg, const std::source_location loc)
-{
-	if (n1 <= n2) return true;
-	if (msg.empty())
-		Detail::fail(loc, n1, " is not lower or equal to ", n2);
-	else
-		Detail::fail(loc, msg);
-
-	return false;
+	LUD_ASSERT_TRAP();
 }
 
 template<class Min, class T, class Max>
-inline bool range(Min min, T val, Max max, const std::string& msg, const std::source_location loc)
+inline void range(Min min, T val, Max max, const std::string_view msg, const std::source_location loc)
 {
-	if (min <= val && val < max) return true;
+	if (min <= val && val < max) return;
 	if (msg.empty())
-		Detail::fail(loc, val, " is not in the range [", min, ", ", max, ")");
+		Detail::log_fail(loc, "RANGE", "{} is not in the range [{}, {})", val, min, max);
 	else
-		Detail::fail(loc, msg);
+		Detail::log_fail(loc, "RANGE", msg);
 
-	return false;
+	LUD_ASSERT_TRAP();
 }
 
 }
@@ -301,44 +300,44 @@ inline bool range(Min min, T val, Max max, const std::string& msg, const std::so
 
 namespace Lud::assert
 {
-constexpr inline bool eq(bool expr, const std::string& msg="")
+constexpr inline void eq(bool expr, const std::string_view msg="")
 {
-	return true;
+	return;
 }
 template<class T1, class T2>
-constexpr inline bool eq(T1 n1, T2 n2, const std::string& msg="")
+constexpr inline void eq(T1 n1, T2 n2, const std::string_view msg="")
 {
-	return true;
+	return;
 }
 template<class T1, class T2>
-constexpr inline bool ne(T1 n1, T2 n2, const std::string& msg="")
+constexpr inline void ne(T1 n1, T2 n2, const std::string_view msg="")
 {
-	return true;
+	return;
 }
 template<class T1, class T2>
-constexpr inline bool greater(T1 n1, T2 n2, const std::string& msg="")
+constexpr inline void gt(T1 n1, T2 n2, const std::string_view msg="")
 {
-	return true;
+	return;
 }
 template<class T1, class T2>
-constexpr inline bool lower(T1 n1, T2 n2, const std::string& msg="")
+constexpr inline void lt(T1 n1, T2 n2, const std::string_view msg="")
 {
-	return true;
+	return;
 }
 template<class T1, class T2>
-constexpr inline bool geq(T1 n1, T2 n2, const std::string& msg="")
+constexpr inline void geq(T1 n1, T2 n2, const std::string_view msg="")
 {
-	return true;
+	return;
 }
 template<class T1, class T2>
-constexpr inline bool leq(T1 n1, T2 n2, const std::string& msg="")
+constexpr inline void leq(T1 n1, T2 n2, const std::string_view msg="")
 {
-	return true;
+	return;
 }
 template<class Min, class T, class Max>
-constexpr inline bool range(Min min, T val, Max max, const std::string& msg="")
+constexpr inline void range(Min min, T val, Max max, const std::string_view msg="")
 {
-	return true;
+	return;
 }
 }
 
@@ -347,68 +346,68 @@ constexpr inline bool range(Min min, T val, Max max, const std::string& msg="")
 namespace Lud::check
 {
 
-inline void eq(bool expr, const std::string& msg)
+inline void eq(bool expr, const std::string_view msg)
 {
 	if (expr) return;
 
-	throw std::logic_error(msg);
+	throw std::logic_error(std::string(msg));
 }
-
 template<class T1, class T2>
-inline void eq(T1 n1, T2 n2, const std::string& msg)
+inline void eq(T1 n1, T2 n2, const std::string_view msg)
 {
 	if (n1 == n2) return;
 
-	throw std::logic_error(msg);
+	throw std::logic_error(std::string(msg));
 }
 
+
 template<class T1, class T2>
-inline void ne(T1 n1, T2 n2, const std::string& msg)
+inline void ne(T1 n1, T2 n2, const std::string_view msg)
 {
 	if (n1 != n2) return;
 
-	throw std::logic_error(msg);
+	throw std::logic_error(std::string(msg));
 
 }
 
 template<class T1, class T2>
-inline void greater(T1 n1, T2 n2, const std::string& msg)
+inline void gt(T1 n1, T2 n2, const std::string_view msg)
 {
 	if (n1 > n2) return;
 
-	throw std::logic_error(msg);
+	throw std::logic_error(std::string(msg));
 }
 
 template<class T1, class T2>
-inline void lower(T1 n1, T2 n2, const std::string& msg)
+inline void lt(T1 n1, T2 n2, const std::string_view msg)
 {
 	if (n1 < n2) return;
 
-	throw std::logic_error(msg);
+	throw std::logic_error(std::string(msg));
 }
 
 template<class T1, class T2>
-inline void geq(T1 n1, T2 n2, const std::string& msg)
+inline void geq(T1 n1, T2 n2, const std::string_view msg)
 {
 	if (n1 >= n2) return;
 
-	throw std::logic_error(msg);
+	throw std::logic_error(std::string(msg));
 }
 
 template<class T1, class T2>
-inline void leq(T1 n1, T2 n2, const std::string& msg)
+inline void leq(T1 n1, T2 n2, const std::string_view msg)
 {
 	if (n1 <= n2) return;
 
-	throw std::logic_error(msg);
+	throw std::logic_error(std::string(msg));
 }
 
 template<class Min, class T, class Max>
-inline void range(Min min, T val, Max max, const std::string& msg)
+inline void range(Min min, T val, Max max, const std::string_view msg)
 {
 	if (min <= val && val < max) return;
 
-	throw std::logic_error(msg);
+	throw std::logic_error(std::string(msg));
 }
 
 }

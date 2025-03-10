@@ -25,8 +25,7 @@ class Slurper : public std::ifstream
 {
 public:
 	Slurper() = default;
-	Slurper(const std::string_view filename, std::ios_base::openmode mode = std::ios_base::in);
-	Slurper(const char* filename, std::ios_base::openmode mode = std::ios_base::in);
+	Slurper(const std::filesystem::path, std::ios_base::openmode mode = std::ios_base::in);
 
 	Slurper(const Slurper& slurper) = delete;
 	Slurper(Slurper&& slurper) noexcept = default;
@@ -58,19 +57,16 @@ public:
 	Slurper& Reset();
 
 	// opens file 
-	bool Open(const std::string_view filename, std::ios_base::openmode mode = std::ios_base::in);
-	bool Open(const char* filename, std::ios_base::openmode mode = std::ios_base::in);
+	bool Open(const std::filesystem::path, std::ios_base::openmode mode = std::ios_base::in);
 
 	// returns file as vector of lines without you needing to creating a slurper
-	static std::vector<std::string> Slurp(const std::string_view filename, std::ios_base::openmode mode = std::ios_base::in);
-	static std::vector<std::string> Slurp(const char* filename, std::ios_base::openmode mode = std::ios_base::in);
+	static std::vector<std::string> Slurp(const std::filesystem::path, std::ios_base::openmode mode = std::ios_base::in);
 
 	// reads whole file to T vector
 	template<typename T> std::vector<T> ReadTo();
 	template<typename T> void ReadTo(std::span<T> data);
 
-	template<typename T> static std::vector<T> SlurpTo(const std::string_view filename, std::ios_base::openmode mode = std::ios_base::in);
-	template<typename T> static std::vector<T> SlurpTo(const char* filename, std::ios_base::openmode mode = std::ios_base::in);
+	template<typename T> static std::vector<T> SlurpTo(const std::filesystem::path, std::ios_base::openmode mode = std::ios_base::in);
 
 
 	// closes file
@@ -89,16 +85,12 @@ private:
 #ifdef LUD_SLURPER_IMPLEMENTATION
 namespace Lud
 {
-inline Slurper::Slurper(const std::string_view filename, const std::ios_base::openmode mode)
+inline Slurper::Slurper(const std::filesystem::path filename, const std::ios_base::openmode mode)
 	: m_mode(mode)
 {
 	Open(filename, mode);
 }
-inline Slurper::Slurper(const char* filename, const std::ios_base::openmode mode)
-	: m_mode(mode)
-{
-	Open(filename, mode);
-}
+
 
 inline Slurper::~Slurper()
 {
@@ -106,35 +98,19 @@ inline Slurper::~Slurper()
 }
 
 
-inline std::vector<std::string> Slurper::Slurp(const char* filename, const std::ios_base::openmode mode)
+inline std::vector<std::string> Slurper::Slurp(const std::filesystem::path filename, const std::ios_base::openmode mode)
 {
 	Slurper file(filename, mode);
 	return file.ReadLines();
 }
 
-inline std::vector<std::string> Slurper::Slurp(const std::string_view filename, const std::ios_base::openmode mode)
-{
-	Slurper file(filename, mode);
-	return file.ReadLines();
-}
-
-inline bool Lud::Slurper::Open(const std::string_view filename, const std::ios_base::openmode mode)
+inline bool Lud::Slurper::Open(const std::filesystem::path filename, const std::ios_base::openmode mode)
 {
 	if (is_open())
 	{
 		Close();
 	}
 
-	open(std::string(filename), mode);
-	return is_open();
-
-}
-inline bool Lud::Slurper::Open(const char* filename, const std::ios_base::openmode mode)
-{
-	if (is_open())
-	{
-		Close();
-	}
 	open(filename, mode);
 	return is_open();
 
@@ -241,20 +217,9 @@ inline void Slurper::ReadTo(std::span<T> data)
 	read(std::bit_cast<char*>( data.data() ), data.size_bytes());
 }
 template<typename T>
-inline std::vector<T> Slurper::SlurpTo(const std::string_view filename, std::ios_base::openmode mode)
+inline std::vector<T> Slurper::SlurpTo(const std::filesystem::path, std::ios_base::openmode mode)
 {
 	Slurper file(filename, mode | std::ios::ate);
-	return file.ReadTo<T>();
-}
-
-template<typename T>
-inline std::vector<T> Slurper::SlurpTo(const char* filename, std::ios_base::openmode mode)
-{
-	Slurper file(filename, mode | std::ios::ate);
-	if (!file.is_open())
-	{
-		throw std::runtime_error("File not found");
-	}
 	return file.ReadTo<T>();
 }
 
