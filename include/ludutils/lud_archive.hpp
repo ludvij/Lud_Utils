@@ -1,5 +1,5 @@
-#ifndef LUD_UNZIP_HEADER
-#define LUD_UNZIP_HEADER
+#ifndef LUD_ARCHIVE_HEADER
+#define LUD_ARCHIVE_HEADER
 
 /**
  * REQURIES ZLIB TO WORK
@@ -37,8 +37,6 @@ uint8_t* UncompressDeflateStream(FileInZipData& zipped_file, std::istream& strea
 
 
 }
-
-#ifdef LUD_UNZIP_IMPLEMENTATION
 
 
 #include <bit>
@@ -342,7 +340,7 @@ int uncompress_oneshot(uint8_t* src, size_t src_len, uint8_t* dst, size_t dst_le
 }
 }
 
-std::vector<FileInZipData> CreateZipDirectory(std::istream& stream)
+inline std::vector<FileInZipData> CreateZipDirectory(std::istream& stream)
 {
 	// get buffer containing possible eocd
 
@@ -378,7 +376,7 @@ std::vector<FileInZipData> CreateZipDirectory(std::istream& stream)
 }
 
 
-uint8_t* UncompressDeflateStream(FileInZipData& zipped_file, std::istream& stream)
+inline uint8_t* UncompressDeflateStream(FileInZipData& zipped_file, std::istream& stream)
 {
 	const auto cur_pos = stream.tellg();
 	stream.seekg(zipped_file.offset);
@@ -398,5 +396,4 @@ uint8_t* UncompressDeflateStream(FileInZipData& zipped_file, std::istream& strea
 
 }
 
-#endif // !LUD_UNZIP_IMPLEMENTATION
-#endif // !LUD_UNZIP_HEADER
+#endif // !LUD_ARCHIVE_HEADER

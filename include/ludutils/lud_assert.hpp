@@ -51,8 +51,8 @@ do { \
 namespace Lud::assert
 {
 
-void eq(bool expr, const std::string_view msg= "", const std::source_location loc = std::source_location::current());
-void that(bool expr, const std::string_view msg= "", const std::source_location loc = std::source_location::current());
+inline void eq(bool expr, const std::string_view msg= "", const std::source_location loc = std::source_location::current());
+inline void that(bool expr, const std::string_view msg= "", const std::source_location loc = std::source_location::current());
 template<class T1, class T2> void eq(T1 n1, T2 n2, const std::string_view msg= "", const std::source_location loc = std::source_location::current());
 template<class T1, class T2> void ne(T1 n1, T2 n2, const std::string_view msg= "", const std::source_location loc = std::source_location::current());
 template<class T1, class T2> void gt(T1 n1, T2 n2, const std::string_view msg= "", const std::source_location loc = std::source_location::current());
@@ -67,7 +67,7 @@ template<class Min, class T, class Max> void range(Min min, T val, Max max, cons
 namespace Lud::check
 {
 
-void eq(bool expr, const std::string_view msg = "The expression evaluated to false");
+inline void eq(bool expr, const std::string_view msg = "The expression evaluated to false");
 template<class T1, class T2> void eq(T1 n1, T2 n2, const std::string_view msg = "passed arguments are not the same");
 template<class T1, class T2> void ne(T1 n1, T2 n2, const std::string_view msg = "passed arguments are the same");
 template<class T1, class T2> void gt(T1 n1, T2 n2, const std::string_view msg = "n1 is not greater than n2");
@@ -162,13 +162,12 @@ static void psnip_trap(void)
 
 #define LUD_ASSERT_TRAP() psnip_trap()
 
-#ifdef LUD_ASSERT_IMPLEMENTATION
 namespace Lud::Detail
 {
 
 
 template <typename... Args>
-void log_fail(const std::source_location loc, std::string_view name, std::string_view msg, Args&&... args)
+inline void log_fail(const std::source_location loc, std::string_view name, std::string_view msg, Args&&... args)
 {
 	std::cout << "[ASSERT FAIL] " << loc.file_name() << "(" << loc.line() << ", " << loc.column() << ")\n";
 	std::cout << std::vformat("{: >13s} → ", std::make_format_args(name)) << std::vformat(msg, std::make_format_args(args...)) << '\n';
@@ -178,7 +177,7 @@ void log_fail(const std::source_location loc, std::string_view name, std::string
 
 namespace Lud::assert
 {
-void that(bool expr, const std::string_view msg, const std::source_location loc)
+inline void that(bool expr, const std::string_view msg, const std::source_location loc)
 {
 	if (expr) return;
 
@@ -189,7 +188,7 @@ void that(bool expr, const std::string_view msg, const std::source_location loc)
 
 	LUD_ASSERT_TRAP();
 }
-void eq(bool expr, const std::string_view msg, const std::source_location loc)
+inline void eq(bool expr, const std::string_view msg, const std::source_location loc)
 {
 	if (expr) return;
 
@@ -202,7 +201,7 @@ void eq(bool expr, const std::string_view msg, const std::source_location loc)
 }
 
 template<class T1, class T2>
-void eq(T1 n1, T2 n2, const std::string_view msg, const std::source_location loc)
+inline void eq(T1 n1, T2 n2, const std::string_view msg, const std::source_location loc)
 {
 	if (n1 == n2) return;
 
@@ -216,7 +215,7 @@ void eq(T1 n1, T2 n2, const std::string_view msg, const std::source_location loc
 }
 
 template<class T1, class T2>
-void ne(T1 n1, T2 n2, const std::string_view msg, const std::source_location loc)
+inline void ne(T1 n1, T2 n2, const std::string_view msg, const std::source_location loc)
 {
 	if (n1 != n2) return;
 
@@ -229,7 +228,7 @@ void ne(T1 n1, T2 n2, const std::string_view msg, const std::source_location loc
 }
 
 template<class T1, class T2>
-void gt(T1 n1, T2 n2, const std::string_view msg, const std::source_location loc)
+inline void gt(T1 n1, T2 n2, const std::string_view msg, const std::source_location loc)
 {
 	if (n1 > n2) return;
 
@@ -242,7 +241,7 @@ void gt(T1 n1, T2 n2, const std::string_view msg, const std::source_location loc
 }
 
 template<class T1, class T2>
-void lt(T1 n1, T2 n2, const std::string_view msg, const std::source_location loc)
+inline void lt(T1 n1, T2 n2, const std::string_view msg, const std::source_location loc)
 {
 	if (n1 < n2) return;
 
@@ -255,7 +254,7 @@ void lt(T1 n1, T2 n2, const std::string_view msg, const std::source_location loc
 }
 
 template<class T1, class T2>
-void geq(T1 n1, T2 n2, const std::string_view msg, const std::source_location loc)
+inline void geq(T1 n1, T2 n2, const std::string_view msg, const std::source_location loc)
 {
 	if (n1 >= n2) return;
 
@@ -268,7 +267,7 @@ void geq(T1 n1, T2 n2, const std::string_view msg, const std::source_location lo
 }
 
 template<class T1, class T2>
-void leq(T1 n1, T2 n2, const std::string_view msg, const std::source_location loc)
+inline void leq(T1 n1, T2 n2, const std::string_view msg, const std::source_location loc)
 {
 	if (n1 <= n2) return;
 	if (msg.empty())
@@ -280,7 +279,7 @@ void leq(T1 n1, T2 n2, const std::string_view msg, const std::source_location lo
 }
 
 template<class Min, class T, class Max>
-void range(Min min, T val, Max max, const std::string_view msg, const std::source_location loc)
+inline void range(Min min, T val, Max max, const std::string_view msg, const std::source_location loc)
 {
 	if (min <= val && val < max) return;
 	if (msg.empty())
@@ -300,42 +299,42 @@ void range(Min min, T val, Max max, const std::string_view msg, const std::sourc
 
 namespace Lud::assert
 {
-constexpr void eq(bool expr, const std::string_view msg="")
+constexpr inline void eq(bool expr, const std::string_view msg="")
 {
 	return;
 }
 template<class T1, class T2>
-constexpr void eq(T1 n1, T2 n2, const std::string_view msg="")
+constexpr inline void eq(T1 n1, T2 n2, const std::string_view msg="")
 {
 	return;
 }
 template<class T1, class T2>
-constexpr void ne(T1 n1, T2 n2, const std::string_view msg="")
+constexpr inline void ne(T1 n1, T2 n2, const std::string_view msg="")
 {
 	return;
 }
 template<class T1, class T2>
-constexpr void gt(T1 n1, T2 n2, const std::string_view msg="")
+constexpr inline void gt(T1 n1, T2 n2, const std::string_view msg="")
 {
 	return;
 }
 template<class T1, class T2>
-constexpr void lt(T1 n1, T2 n2, const std::string_view msg="")
+constexpr inline void lt(T1 n1, T2 n2, const std::string_view msg="")
 {
 	return;
 }
 template<class T1, class T2>
-constexpr void geq(T1 n1, T2 n2, const std::string_view msg="")
+constexpr inline void geq(T1 n1, T2 n2, const std::string_view msg="")
 {
 	return;
 }
 template<class T1, class T2>
-constexpr void leq(T1 n1, T2 n2, const std::string_view msg="")
+constexpr inline void leq(T1 n1, T2 n2, const std::string_view msg="")
 {
 	return;
 }
 template<class Min, class T, class Max>
-constexpr void range(Min min, T val, Max max, const std::string_view msg="")
+constexpr inline void range(Min min, T val, Max max, const std::string_view msg="")
 {
 	return;
 }
@@ -346,14 +345,14 @@ constexpr void range(Min min, T val, Max max, const std::string_view msg="")
 namespace Lud::check
 {
 
-void eq(bool expr, const std::string_view msg)
+inline void eq(bool expr, const std::string_view msg)
 {
 	if (expr) return;
 
 	throw std::logic_error(std::string(msg));
 }
 template<class T1, class T2>
-void eq(T1 n1, T2 n2, const std::string_view msg)
+inline void eq(T1 n1, T2 n2, const std::string_view msg)
 {
 	if (n1 == n2) return;
 
@@ -362,7 +361,7 @@ void eq(T1 n1, T2 n2, const std::string_view msg)
 
 
 template<class T1, class T2>
-void ne(T1 n1, T2 n2, const std::string_view msg)
+inline void ne(T1 n1, T2 n2, const std::string_view msg)
 {
 	if (n1 != n2) return;
 
@@ -371,7 +370,7 @@ void ne(T1 n1, T2 n2, const std::string_view msg)
 }
 
 template<class T1, class T2>
-void gt(T1 n1, T2 n2, const std::string_view msg)
+inline void gt(T1 n1, T2 n2, const std::string_view msg)
 {
 	if (n1 > n2) return;
 
@@ -379,7 +378,7 @@ void gt(T1 n1, T2 n2, const std::string_view msg)
 }
 
 template<class T1, class T2>
-void lt(T1 n1, T2 n2, const std::string_view msg)
+inline void lt(T1 n1, T2 n2, const std::string_view msg)
 {
 	if (n1 < n2) return;
 
@@ -387,7 +386,7 @@ void lt(T1 n1, T2 n2, const std::string_view msg)
 }
 
 template<class T1, class T2>
-void geq(T1 n1, T2 n2, const std::string_view msg)
+inline void geq(T1 n1, T2 n2, const std::string_view msg)
 {
 	if (n1 >= n2) return;
 
@@ -395,7 +394,7 @@ void geq(T1 n1, T2 n2, const std::string_view msg)
 }
 
 template<class T1, class T2>
-void leq(T1 n1, T2 n2, const std::string_view msg)
+inline void leq(T1 n1, T2 n2, const std::string_view msg)
 {
 	if (n1 <= n2) return;
 
@@ -403,7 +402,7 @@ void leq(T1 n1, T2 n2, const std::string_view msg)
 }
 
 template<class Min, class T, class Max>
-void range(Min min, T val, Max max, const std::string_view msg)
+inline void range(Min min, T val, Max max, const std::string_view msg)
 {
 	if (min <= val && val < max) return;
 
@@ -411,5 +410,4 @@ void range(Min min, T val, Max max, const std::string_view msg)
 }
 
 }
-#endif//LUD_ASSERT_IMPLEMENTATION
 #endif//LUD_ASSERT_HEADER

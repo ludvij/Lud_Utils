@@ -207,7 +207,7 @@ std::vector<T> Slurper::ReadTo()
 {
 	const size_t file_size = Size();
 	std::vector<T> buffer(file_size / sizeof(T));
-	read(reinterpret_cast<char*>( buffer.data() ), file_size);
+	read(reinterpret_cast<char*>(buffer.data()), file_size);
 
 	return buffer;
 }
@@ -217,7 +217,7 @@ void Slurper::ReadTo(std::span<T> data)
 	read(std::bit_cast<char*>( data.data() ), data.size_bytes());
 }
 template<typename T>
-std::vector<T> Slurper::SlurpTo(const std::filesystem::path, std::ios_base::openmode mode)
+std::vector<T> Slurper::SlurpTo(const std::filesystem::path filename, std::ios_base::openmode mode)
 {
 	Slurper file(filename, mode | std::ios::ate);
 	return file.ReadTo<T>();

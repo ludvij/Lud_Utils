@@ -44,8 +44,6 @@ struct std::formatter<Lud::uuid_t>
 	}
 };
 
-#ifdef LUD_ID_IMPLEMENTATION
-
 // implementation
 #include <print>
 #include <random>
@@ -109,5 +107,4 @@ inline std::string to_string(const UUID& id)
 
 }
 
-#endif//LUD_ID_IMPLEMENTATION
 #endif
