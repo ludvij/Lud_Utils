@@ -48,6 +48,9 @@ template<RealType N>    std::optional<N> is_num(std::string_view sv, std::chars_
 std::vector<std:: string>  Split(const std:: string_view  str, const std:: string_view  delim);
 std::vector<std::wstring> wSplit(const std::wstring_view wstr, const std::wstring_view wdelim);
 
+std:: string  Join(const std::vector<std:: string>  parts, const std:: string_view  delim);
+std::wstring wJoin(const std::vector<std::wstring> wparts, const std::wstring_view wdelim);
+
 std:: string  RemovePrefix(const std:: string_view  str, const std:: string_view  prefix);
 std::wstring wRemovePrefix(const std::wstring_view wstr, const std::wstring_view wprefix);
 
@@ -75,34 +78,40 @@ std::wstring wRStrip(const std::wstring_view wstr);
 std:: string  Strip(const std:: string_view  str);
 std::wstring wStrip(const std::wstring_view wstr);
 
+std:: string  Reverse(const std:: string_view  str);
+std::wstring wReverse(const std::wstring_view wstr);
+
 namespace inplace
 {
-	std:: string&  RemovePrefix(std:: string&  str, const std:: string_view  prefix);
-	std::wstring& wRemovePrefix(std::wstring& wstr, const std::wstring_view wprefix);
+std:: string&  RemovePrefix(std:: string&  str, const std:: string_view  prefix);
+std::wstring& wRemovePrefix(std::wstring& wstr, const std::wstring_view wprefix);
 
-	std:: string&  RemoveSuffix(std:: string&  str, const std:: string_view  suffix);
-	std::wstring& wRemoveSuffix(std::wstring& wstr, const std::wstring_view wsuffix);
+std:: string&  RemoveSuffix(std:: string&  str, const std:: string_view  suffix);
+std::wstring& wRemoveSuffix(std::wstring& wstr, const std::wstring_view wsuffix);
 
-	std:: string&  ToUpper(std:: string&  str);
-	std::wstring& wToUpper(std::wstring& wstr);
+std:: string&  ToUpper(std:: string&  str);
+std::wstring& wToUpper(std::wstring& wstr);
 
-	std:: string&  ToLower(std:: string&  str);
-	std::wstring& wToLower(std::wstring& wstr);
+std:: string&  ToLower(std:: string&  str);
+std::wstring& wToLower(std::wstring& wstr);
 
-	std:: string&  ToTitle(std:: string&  str);
-	std::wstring& wToTitle(std::wstring& wstr);
+std:: string&  ToTitle(std:: string&  str);
+std::wstring& wToTitle(std::wstring& wstr);
 
-	std:: string&  Capitalize(std:: string&  str);
-	std::wstring& wCapitalize(std::wstring& wstr);
+std:: string&  Capitalize(std:: string&  str);
+std::wstring& wCapitalize(std::wstring& wstr);
 
-	std:: string&  LStrip(std:: string&  str);
-	std::wstring& wLStrip(std::wstring& wstr);
+std:: string&  LStrip(std:: string&  str);
+std::wstring& wLStrip(std::wstring& wstr);
 
-	std:: string&  RStrip(std:: string&  str);
-	std::wstring& wRStrip(std::wstring& wstr);
-	
-	std:: string&  Strip(std:: string&  str);
-	std::wstring& wStrip(std::wstring& wstr);
+std:: string&  RStrip(std:: string&  str);
+std::wstring& wRStrip(std::wstring& wstr);
+
+std:: string&  Strip(std:: string&  str);
+std::wstring& wStrip(std::wstring& wstr);
+
+std:: string&  Reverse(std:: string&  str);
+std::wstring& wReverse(std::wstring& wstr);
 }
 
 }
@@ -228,6 +237,40 @@ inline std::vector<std::wstring> Lud::wSplit(const std::wstring_view wstr, const
 	return parts;
 }
 
+inline std::string Lud::Join(const std::vector<std::string> parts, const std::string_view delim)
+{
+	std::string res;
+	if (parts.empty())
+	{
+		return res;
+	}
+	res.append(parts[0]);
+	for(size_t i = 1; i < parts.size(); i++)
+	{
+		res.append(delim);
+		res.append(parts[i]);
+	}
+
+	return res;
+}
+
+inline std::wstring Lud::wJoin(const std::vector<std::wstring> wparts, const std::wstring_view wdelim)
+{
+	std::wstring res;
+	if (wparts.empty())
+	{
+		return res;
+	}
+	res.append(wparts[0]);
+	for(size_t i = 1; i < wparts.size(); i++)
+	{
+		res.append(wdelim);
+		res.append(wparts[i]);
+	}
+
+	return res;
+}
+
 inline std::wstring Lud::wRemovePrefix(const std::wstring_view wstr, const std::wstring_view wprefix)
 {
 
@@ -321,7 +364,7 @@ inline std::wstring Lud::wToTitle(const std::wstring_view wstr)
 	return res;
 }
 
-std::string Lud::Capitalize(const std::string_view str)
+inline std::string Lud::Capitalize(const std::string_view str)
 {
 	std::string res(str);
 
@@ -330,7 +373,7 @@ std::string Lud::Capitalize(const std::string_view str)
 	return res;
 }
 
-std::wstring Lud::wCapitalize(const std::wstring_view wstr)
+inline std::wstring Lud::wCapitalize(const std::wstring_view wstr)
 {
 	std::wstring res(wstr);
 
@@ -407,6 +450,16 @@ inline std::wstring Lud::wStrip(const std::wstring_view wstr)
 	inplace::wStrip(res);
 
 	return res;
+}
+
+inline std::string Lud::Reverse(const std::string_view str)
+{
+	return std::string(str.rbegin(), str.rend());
+}
+
+inline std::wstring Lud::wReverse(const std::wstring_view wstr)
+{
+	return std::wstring(wstr.rbegin(), wstr.rend());
 }
 
 inline std::string& Lud::inplace::ToUpper(std::string& str)
@@ -570,6 +623,18 @@ inline std::wstring& Lud::inplace::wStrip(std::wstring &wstr)
 		wstr.erase(0, first);
 		wstr.erase(last);
 	}
+	return wstr;
+}
+
+inline std::string &Lud::inplace::Reverse(std::string &str)
+{
+	std::reverse(str.begin(), str.end());
+	return str;
+}
+
+inline std::wstring &Lud::inplace::wReverse(std::wstring &wstr)
+{
+	std::reverse(wstr.begin(), wstr.end());
 	return wstr;
 }
 
