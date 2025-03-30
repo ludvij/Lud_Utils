@@ -5,6 +5,7 @@
 #include <optional>
 #include <string_view>
 #include <algorithm>
+#include <cwctype>
 
 namespace Lud
 {
@@ -45,72 +46,72 @@ template<RealType N>    std::optional<N> is_num(std::string_view sv, std::chars_
 
 
 // TODO: look how to template this
-std::vector<std:: string>  Split(const std:: string_view  str, const std:: string_view  delim);
+std::vector<std::string>  Split(const std::string_view  str, const std::string_view  delim);
 std::vector<std::wstring> wSplit(const std::wstring_view wstr, const std::wstring_view wdelim);
 
-std:: string  Join(const std::vector<std:: string>  parts, const std:: string_view  delim);
+std::string  Join(const std::vector<std::string>  parts, const std::string_view  delim);
 std::wstring wJoin(const std::vector<std::wstring> wparts, const std::wstring_view wdelim);
 
-std:: string  RemovePrefix(const std:: string_view  str, const std:: string_view  prefix);
+std::string  RemovePrefix(const std::string_view  str, const std::string_view  prefix);
 std::wstring wRemovePrefix(const std::wstring_view wstr, const std::wstring_view wprefix);
 
-std:: string  RemoveSuffix(const std:: string_view  str, const std:: string_view  suffix);
+std::string  RemoveSuffix(const std::string_view  str, const std::string_view  suffix);
 std::wstring wRemoveSuffix(const std::wstring_view wstr, const std::wstring_view wsuffix);
 
-std:: string  ToUpper(const std:: string_view  str);
+std::string  ToUpper(const std::string_view  str);
 std::wstring wToUpper(const std::wstring_view wstr);
 
-std:: string  ToLower(const std:: string_view  str);
+std::string  ToLower(const std::string_view  str);
 std::wstring wToLower(const std::wstring_view wstr);
 
-std:: string  ToTitle(const std:: string_view  str);
+std::string  ToTitle(const std::string_view  str);
 std::wstring wToTitle(const std::wstring_view wstr);
 
-std:: string  Capitalize(const std:: string_view  str);
+std::string  Capitalize(const std::string_view  str);
 std::wstring wCapitalize(const std::wstring_view wstr);
 
-std:: string  LStrip(const std:: string_view  str);
+std::string  LStrip(const std::string_view  str);
 std::wstring wLStrip(const std::wstring_view wstr);
 
-std:: string  RStrip(const std:: string_view  str);
+std::string  RStrip(const std::string_view  str);
 std::wstring wRStrip(const std::wstring_view wstr);
 
-std:: string  Strip(const std:: string_view  str);
+std::string  Strip(const std::string_view  str);
 std::wstring wStrip(const std::wstring_view wstr);
 
-std:: string  Reverse(const std:: string_view  str);
+std::string  Reverse(const std::string_view  str);
 std::wstring wReverse(const std::wstring_view wstr);
 
 namespace inplace
 {
-std:: string&  RemovePrefix(std:: string&  str, const std:: string_view  prefix);
+std::string& RemovePrefix(std::string& str, const std::string_view  prefix);
 std::wstring& wRemovePrefix(std::wstring& wstr, const std::wstring_view wprefix);
 
-std:: string&  RemoveSuffix(std:: string&  str, const std:: string_view  suffix);
+std::string& RemoveSuffix(std::string& str, const std::string_view  suffix);
 std::wstring& wRemoveSuffix(std::wstring& wstr, const std::wstring_view wsuffix);
 
-std:: string&  ToUpper(std:: string&  str);
+std::string& ToUpper(std::string& str);
 std::wstring& wToUpper(std::wstring& wstr);
 
-std:: string&  ToLower(std:: string&  str);
+std::string& ToLower(std::string& str);
 std::wstring& wToLower(std::wstring& wstr);
 
-std:: string&  ToTitle(std:: string&  str);
+std::string& ToTitle(std::string& str);
 std::wstring& wToTitle(std::wstring& wstr);
 
-std:: string&  Capitalize(std:: string&  str);
+std::string& Capitalize(std::string& str);
 std::wstring& wCapitalize(std::wstring& wstr);
 
-std:: string&  LStrip(std:: string&  str);
+std::string& LStrip(std::string& str);
 std::wstring& wLStrip(std::wstring& wstr);
 
-std:: string&  RStrip(std:: string&  str);
+std::string& RStrip(std::string& str);
 std::wstring& wRStrip(std::wstring& wstr);
 
-std:: string&  Strip(std:: string&  str);
+std::string& Strip(std::string& str);
 std::wstring& wStrip(std::wstring& wstr);
 
-std:: string&  Reverse(std:: string&  str);
+std::string& Reverse(std::string& str);
 std::wstring& wReverse(std::wstring& wstr);
 }
 
@@ -164,7 +165,8 @@ inline std::vector<std::string> Lud::Split(const std::string_view str, const std
 	size_t next = str.find(delim);
 	std::string_view inner_str = str;
 
-	while (next != std::string_view::npos){
+	while (next != std::string_view::npos)
+	{
 		if (next != 0)
 		{
 			parts.emplace_back(inner_str.substr(0, next));
@@ -199,7 +201,7 @@ inline std::string Lud::RemoveSuffix(const std::string_view str, const std::stri
 	return std::string(str);
 }
 
-inline std::string& Lud::inplace::RemovePrefix(std::string &str, const std::string_view prefix)
+inline std::string& Lud::inplace::RemovePrefix(std::string& str, const std::string_view prefix)
 {
 	if (str.starts_with(prefix))
 	{
@@ -208,7 +210,7 @@ inline std::string& Lud::inplace::RemovePrefix(std::string &str, const std::stri
 	return str;
 }
 
-inline std::string& Lud::inplace::RemoveSuffix(std::string &str, const std::string_view suffix)
+inline std::string& Lud::inplace::RemoveSuffix(std::string& str, const std::string_view suffix)
 {
 	if (str.ends_with(suffix))
 	{
@@ -223,7 +225,8 @@ inline std::vector<std::wstring> Lud::wSplit(const std::wstring_view wstr, const
 	size_t next = wstr.find(wdelim);
 	std::wstring_view inner_str = wstr;
 
-	while (next != std::wstring_view::npos){
+	while (next != std::wstring_view::npos)
+	{
 		if (next != 0)
 		{
 			parts.emplace_back(inner_str.substr(0, next));
@@ -245,7 +248,7 @@ inline std::string Lud::Join(const std::vector<std::string> parts, const std::st
 		return res;
 	}
 	res.append(parts[0]);
-	for(size_t i = 1; i < parts.size(); i++)
+	for (size_t i = 1; i < parts.size(); i++)
 	{
 		res.append(delim);
 		res.append(parts[i]);
@@ -262,7 +265,7 @@ inline std::wstring Lud::wJoin(const std::vector<std::wstring> wparts, const std
 		return res;
 	}
 	res.append(wparts[0]);
-	for(size_t i = 1; i < wparts.size(); i++)
+	for (size_t i = 1; i < wparts.size(); i++)
 	{
 		res.append(wdelim);
 		res.append(wparts[i]);
@@ -292,7 +295,7 @@ inline std::wstring Lud::wRemoveSuffix(const std::wstring_view wstr, const std::
 	return std::wstring(wstr);
 }
 
-inline std::wstring& Lud::inplace::wRemovePrefix(std::wstring &wstr, const std::wstring_view wprefix)
+inline std::wstring& Lud::inplace::wRemovePrefix(std::wstring& wstr, const std::wstring_view wprefix)
 {
 	if (wstr.starts_with(wprefix))
 	{
@@ -301,7 +304,7 @@ inline std::wstring& Lud::inplace::wRemovePrefix(std::wstring &wstr, const std::
 	return wstr;
 }
 
-inline std::wstring& Lud::inplace::wRemoveSuffix(std::wstring &wstr, const std::wstring_view wsuffix)
+inline std::wstring& Lud::inplace::wRemoveSuffix(std::wstring& wstr, const std::wstring_view wsuffix)
 {
 	if (wstr.ends_with(wsuffix))
 	{
@@ -340,7 +343,7 @@ inline std::string Lud::ToLower(const std::string_view str)
 inline std::wstring Lud::wToLower(const std::wstring_view wstr)
 {
 	std::wstring res(wstr);
-	
+
 	inplace::wToLower(res);
 
 	return res;
@@ -349,7 +352,7 @@ inline std::wstring Lud::wToLower(const std::wstring_view wstr)
 inline std::string Lud::ToTitle(const std::string_view str)
 {
 	std::string res(str);
-	
+
 	inplace::ToTitle(res);
 
 	return res;
@@ -358,9 +361,9 @@ inline std::string Lud::ToTitle(const std::string_view str)
 inline std::wstring Lud::wToTitle(const std::wstring_view wstr)
 {
 	std::wstring res(wstr);
-	
+
 	inplace::wToTitle(res);
-	
+
 	return res;
 }
 
@@ -387,7 +390,7 @@ inline std::string Lud::LStrip(const std::string_view str)
 	const auto delims = "\t\n\r ";
 	const auto idx = str.find_first_not_of(delims);
 
-	if (idx == std::string::npos) 
+	if (idx == std::string::npos)
 	{
 		return {};
 	}
@@ -400,7 +403,7 @@ inline std::wstring Lud::wLStrip(const std::wstring_view wstr)
 	const auto delims = L"\t\n\r ";
 	const auto idx = wstr.find_first_not_of(delims);
 
-	if (idx == std::wstring::npos) 
+	if (idx == std::wstring::npos)
 	{
 		return {};
 	}
@@ -413,7 +416,7 @@ inline std::string Lud::RStrip(const std::string_view str)
 	const auto delims = "\t\n\r ";
 	const auto idx = str.find_last_not_of(delims);
 
-	if (idx == std::string::npos) 
+	if (idx == std::string::npos)
 	{
 		return {};
 	}
@@ -426,7 +429,7 @@ inline std::wstring Lud::wRStrip(const std::wstring_view wstr)
 	const auto delims = L"\t\n\r ";
 	const auto idx = wstr.find_last_not_of(delims);
 
-	if (idx == std::wstring::npos) 
+	if (idx == std::wstring::npos)
 	{
 		return {};
 	}
@@ -446,7 +449,7 @@ inline std::string Lud::Strip(const std::string_view str)
 inline std::wstring Lud::wStrip(const std::wstring_view wstr)
 {
 	std::wstring res(wstr);
-	
+
 	inplace::wStrip(res);
 
 	return res;
@@ -464,61 +467,65 @@ inline std::wstring Lud::wReverse(const std::wstring_view wstr)
 
 inline std::string& Lud::inplace::ToUpper(std::string& str)
 {
-	std::ranges::transform(str, str.begin(), [](char c) {
-		return std::toupper(c);
-	});
+	std::ranges::transform(str, str.begin(), [](char c)
+		{
+			return std::toupper(c);
+		});
 
 	return str;
 }
 
 inline std::wstring& Lud::inplace::wToUpper(std::wstring& wstr)
 {
-	std::ranges::transform(wstr, wstr.begin(), [](wchar_t c) {
-		return std::towupper(c);
-	});
+	std::ranges::transform(wstr, wstr.begin(), [](wchar_t c)
+		{
+			return std::towupper(c);
+		});
 	return wstr;
 }
 
 inline std::string& Lud::inplace::ToLower(std::string& str)
 {
-	std::ranges::transform(str, str.begin(), [](char c) {
-		return std::tolower(c);
-	});
+	std::ranges::transform(str, str.begin(), [](char c)
+		{
+			return std::tolower(c);
+		});
 	return str;
 }
 
 inline std::wstring& Lud::inplace::wToLower(std::wstring& wstr)
 {
-	std::ranges::transform(wstr, wstr.begin(), [](wchar_t c) {
-		return std::towlower(c);
-	});
+	std::ranges::transform(wstr, wstr.begin(), [](wchar_t c)
+		{
+			return std::towlower(c);
+		});
 	return wstr;
 }
 
-inline std::string& Lud::inplace::Capitalize(std::string &str)
+inline std::string& Lud::inplace::Capitalize(std::string& str)
 {
-	if (!str.empty()) 
+	if (!str.empty())
 	{
-		str[0] = static_cast<char>(std::toupper(str[0]));
+		str[0] = static_cast<char>( std::toupper(str[0]) );
 	}
 	return str;
 }
 
-inline std::wstring& Lud::inplace::wCapitalize(std::wstring &wstr)
+inline std::wstring& Lud::inplace::wCapitalize(std::wstring& wstr)
 {
-	if (!wstr.empty()) 
+	if (!wstr.empty())
 	{
-		wstr[0] = static_cast<wchar_t>(std::towupper(wstr[0]));
+		wstr[0] = static_cast<wchar_t>( std::towupper(wstr[0]) );
 	}
 	return wstr;
 }
-inline std::string& Lud::inplace::ToTitle(std::string &str)
+inline std::string& Lud::inplace::ToTitle(std::string& str)
 {
 	const auto delim = "\t\n\r ";
 	auto idx = str.find_first_not_of(delim);
-	while(idx != std::string::npos)
+	while (idx != std::string::npos)
 	{
-		str[idx] = static_cast<char>(std::toupper(str[idx]));
+		str[idx] = static_cast<char>( std::toupper(str[idx]) );
 		idx = str.find_first_of(delim, idx + 1);
 		if (idx != std::string::npos)
 		{
@@ -528,19 +535,19 @@ inline std::string& Lud::inplace::ToTitle(std::string &str)
 	return str;
 }
 
-inline std::wstring& Lud::inplace::wToTitle(std::wstring &wstr)
+inline std::wstring& Lud::inplace::wToTitle(std::wstring& wstr)
 {
 	const auto delim = L"\t\n\r ";
 	auto idx = wstr.find_first_not_of(delim);
-	while(idx != std::string::npos)
+	while (idx != std::string::npos)
 	{
-		wstr[idx] = static_cast<wchar_t>(std::towupper(wstr[idx]));
+		wstr[idx] = static_cast<wchar_t>( std::towupper(wstr[idx]) );
 		idx = wstr.find_first_not_of(delim, idx + 1);
 	}
 	return wstr;
 }
 
-inline std::string& Lud::inplace::LStrip(std::string &str)
+inline std::string& Lud::inplace::LStrip(std::string& str)
 {
 	const auto delims = "\t\n\r ";
 	const auto idx = str.find_first_not_of(delims);
@@ -549,16 +556,16 @@ inline std::string& Lud::inplace::LStrip(std::string &str)
 	return str;
 }
 
-inline std::wstring& Lud::inplace::wLStrip(std::wstring &wstr)
+inline std::wstring& Lud::inplace::wLStrip(std::wstring& wstr)
 {
 	const auto delims = L"\t\n\r ";
 	const auto idx = wstr.find_first_not_of(delims);
 
-	wstr.erase(0,idx);
+	wstr.erase(0, idx);
 	return wstr;
 }
 
-inline std::string& Lud::inplace::RStrip(std::string &str)
+inline std::string& Lud::inplace::RStrip(std::string& str)
 {
 	const auto delims = "\t\n\r ";
 	const auto idx = str.find_last_not_of(delims);
@@ -574,7 +581,7 @@ inline std::string& Lud::inplace::RStrip(std::string &str)
 	return str;
 }
 
-inline std::wstring& Lud::inplace::wRStrip(std::wstring &wstr)
+inline std::wstring& Lud::inplace::wRStrip(std::wstring& wstr)
 {
 	const auto delims = L"\t\n\r ";
 	const auto idx = wstr.find_last_not_of(delims);
@@ -590,7 +597,7 @@ inline std::wstring& Lud::inplace::wRStrip(std::wstring &wstr)
 	return wstr;
 }
 
-inline std::string& Lud::inplace::Strip(std::string &str)
+inline std::string& Lud::inplace::Strip(std::string& str)
 {
 	const auto delims = "\t\n\r ";
 	const auto first = str.find_first_not_of(delims);
@@ -608,7 +615,7 @@ inline std::string& Lud::inplace::Strip(std::string &str)
 	return str;
 }
 
-inline std::wstring& Lud::inplace::wStrip(std::wstring &wstr)
+inline std::wstring& Lud::inplace::wStrip(std::wstring& wstr)
 {
 	const auto delims = L"\t\n\r ";
 	const auto first = wstr.find_first_not_of(delims);
@@ -626,13 +633,13 @@ inline std::wstring& Lud::inplace::wStrip(std::wstring &wstr)
 	return wstr;
 }
 
-inline std::string &Lud::inplace::Reverse(std::string &str)
+inline std::string& Lud::inplace::Reverse(std::string& str)
 {
 	std::reverse(str.begin(), str.end());
 	return str;
 }
 
-inline std::wstring &Lud::inplace::wReverse(std::wstring &wstr)
+inline std::wstring& Lud::inplace::wReverse(std::wstring& wstr)
 {
 	std::reverse(wstr.begin(), wstr.end());
 	return wstr;
