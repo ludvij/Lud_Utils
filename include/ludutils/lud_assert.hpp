@@ -78,7 +78,7 @@ template<class Min, class T, class Max> void range(Min min, T val, Max max, cons
 
 }
 
-#if !defined(NDEBUG) 
+#ifndef NDEBUG
 
 // https://github.com/nemequ/portable-snippets/blob/master/debug-trap/debug-trap.h
 
@@ -185,8 +185,6 @@ inline void that(bool expr, const std::string_view msg, const std::source_locati
 		Detail::log_fail(loc, "ASSERTION", "The expression evaluated to false");
 	else
 		Detail::log_fail(loc, "ASSERTION", msg);
-
-	LUD_ASSERT_TRAP();
 }
 inline void eq(bool expr, const std::string_view msg, const std::source_location loc)
 {
@@ -196,8 +194,6 @@ inline void eq(bool expr, const std::string_view msg, const std::source_location
 		Detail::log_fail(loc, "EQUAL", "The expression evaluated to false");
 	else
 		Detail::log_fail(loc, "EQUAL", msg);
-
-	LUD_ASSERT_TRAP();
 }
 
 template<class T1, class T2>
@@ -210,8 +206,6 @@ inline void eq(T1 n1, T2 n2, const std::string_view msg, const std::source_locat
 	else
 		Detail::log_fail(loc, "EQUAL", msg);
 
-	LUD_ASSERT_TRAP();
-
 }
 
 template<class T1, class T2>
@@ -223,8 +217,6 @@ inline void ne(T1 n1, T2 n2, const std::string_view msg, const std::source_locat
 		Detail::log_fail(loc, "DIFFERENT", "{} = {}", n1, n2);
 	else
 		Detail::log_fail(loc, "DIFFERENT", msg);
-
-	LUD_ASSERT_TRAP();
 }
 
 template<class T1, class T2>
@@ -236,8 +228,6 @@ inline void gt(T1 n1, T2 n2, const std::string_view msg, const std::source_locat
 		Detail::log_fail(loc, "GREATER THAN", "{} ≤ {}", n1, n2);
 	else
 		Detail::log_fail(loc, "GREATER THAN", msg);
-
-	LUD_ASSERT_TRAP();
 }
 
 template<class T1, class T2>
@@ -249,8 +239,6 @@ inline void lt(T1 n1, T2 n2, const std::string_view msg, const std::source_locat
 		Detail::log_fail(loc, "LOWER THAN", "{} ≥ {}", n1, n2);
 	else
 		Detail::log_fail(loc, "LOWER THAN", msg);
-
-	LUD_ASSERT_TRAP();
 }
 
 template<class T1, class T2>
@@ -262,8 +250,6 @@ inline void geq(T1 n1, T2 n2, const std::string_view msg, const std::source_loca
 		Detail::log_fail(loc, "GREATER EQUAL", "{} < {}", n1, n2);
 	else
 		Detail::log_fail(loc, "GREATER EQUAL", msg);
-
-	LUD_ASSERT_TRAP();
 }
 
 template<class T1, class T2>
@@ -274,8 +260,6 @@ inline void leq(T1 n1, T2 n2, const std::string_view msg, const std::source_loca
 		Detail::log_fail(loc, "LOWER EQUAL", "{} > {} ", n1, n2);
 	else
 		Detail::log_fail(loc, "LOWER EQUAL", msg);
-
-	LUD_ASSERT_TRAP();
 }
 
 template<class Min, class T, class Max>
@@ -286,8 +270,6 @@ inline void range(Min min, T val, Max max, const std::string_view msg, const std
 		Detail::log_fail(loc, "RANGE", "{} is not in the range [{}, {})", val, min, max);
 	else
 		Detail::log_fail(loc, "RANGE", msg);
-
-	LUD_ASSERT_TRAP();
 }
 
 }
@@ -299,6 +281,10 @@ inline void range(Min min, T val, Max max, const std::string_view msg, const std
 
 namespace Lud::assert
 {
+constexpr inline void that(bool expr, const std::string_view msg="")
+{
+	return;
+}
 constexpr inline void eq(bool expr, const std::string_view msg="")
 {
 	return;

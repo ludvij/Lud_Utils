@@ -49,7 +49,7 @@ struct std::formatter<Lud::uuid_t>
 #include <random>
 namespace Lud
 {
-namespace _detail_
+namespace _detail_str_
 {
 
 static std::random_device rnd_dev;
@@ -59,8 +59,8 @@ static std::uniform_int_distribution<uint64_t> dist;
 }
 
 inline UUID::UUID()
-	: m_lo(_detail_::dist(_detail_::mt))
-	, m_hi(_detail_::dist(_detail_::mt))
+	: m_lo(_detail_str_::dist(_detail_str_::mt))
+	, m_hi(_detail_str_::dist(_detail_str_::mt))
 {
 #ifdef LUD_TRACE_ID_LIFETIMES
 	std::println(" Created UUID {{\033[38;5;46m{}\033[31;1;0m}}", *this);
@@ -68,8 +68,8 @@ inline UUID::UUID()
 }
 
 inline UUID::UUID(const UUID& id)
-	: m_lo(_detail_::dist(_detail_::mt))
-	, m_hi(_detail_::dist(_detail_::mt))
+	: m_lo(_detail_str_::dist(_detail_str_::mt))
+	, m_hi(_detail_str_::dist(_detail_str_::mt))
 {
 #ifdef LUD_TRACE_ID_LIFETIMES
 	std::println("  Copied UUID {{\033[38;5;46m{}\033[31;1;0m}}", id);
@@ -78,8 +78,8 @@ inline UUID::UUID(const UUID& id)
 }
 
 inline UUID::UUID(const UUID&& id) noexcept
-	: m_lo(_detail_::dist(_detail_::mt))
-	, m_hi(_detail_::dist(_detail_::mt))
+	: m_lo(_detail_str_::dist(_detail_str_::mt))
+	, m_hi(_detail_str_::dist(_detail_str_::mt))
 {
 #ifdef LUD_TRACE_ID_LIFETIMES
 	std::println("   Moved UUID {{\033[38;5;126m{}\033[31;1;0m}}", id);

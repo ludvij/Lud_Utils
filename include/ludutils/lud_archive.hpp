@@ -52,7 +52,7 @@ uint8_t* UncompressDeflateStream(FileInZipData& zipped_file, std::istream& strea
 namespace Lud
 {
 	
-namespace _detail_
+namespace _detail_str_
 {
 // https://pkwaredownloads.blob.core.windows.net/pkware-general/Documentation/APPNOTE-6.3.9.TXT
 struct LocalFileHeader
@@ -251,7 +251,7 @@ size_t find_eocd_size(std::istream& stream)
 	// check that the EOCD ends at EOF
 	stream.seekg(0, std::ios::end);
 	const size_t file_size = stream.tellg();
-	const size_t max_eocd_size = 0xFFFF + _detail_::EndOfCentralDirectoryRecord::BASE_SIZE;
+	const size_t max_eocd_size = 0xFFFF + _detail_str_::EndOfCentralDirectoryRecord::BASE_SIZE;
 	const size_t buf_size = std::min(max_eocd_size, file_size);
 
 	const uint8_t* buf = new uint8_t[buf_size];
@@ -300,12 +300,14 @@ size_t find_eocd_size(std::istream& stream)
 // https://stackoverflow.com/a/18704403
 // https://stackoverflow.com/a/8662398
 // can't use uncomnpress, buwomp
-int uncompress_oneshot(uint8_t* src, size_t src_len, uint8_t* dst, size_t dst_len)
+size_t uncompress_oneshot(uint8_t* src, uint32_t src_len, uint8_t* dst, uint32_t dst_len)
 {
-	z_stream strm = {0};
+	z_stream strm = {};
 	
-	strm.total_in  = strm.avail_in  = src_len;
-	strm.total_out = strm.avail_out = dst_len;
+	strm.total_in  = src_len;
+	strm.avail_in  = src_len;
+	strm.total_out = dst_len;
+	strm.avail_out = dst_len;
 	
 	strm.next_in  = src;
 	strm.next_out = dst;
@@ -314,19 +316,20 @@ int uncompress_oneshot(uint8_t* src, size_t src_len, uint8_t* dst, size_t dst_le
 	strm.zfree  = Z_NULL;
 	strm.opaque = Z_NULL;
 
-	int ret = -1;
-	ret = inflateInit2(&strm, -MAX_WBITS);
-	if (ret == Z_OK)
+	int err = -1;
+	size_t ret;
+	err = inflateInit2(&strm, -MAX_WBITS);
+	if (err == Z_OK)
 	{
-		ret = inflate(&strm, Z_FINISH);
-		if (ret == Z_STREAM_END)
+		err = inflate(&strm, Z_FINISH);
+		if (err == Z_STREAM_END)
 		{
 			ret = strm.total_out;
 		}
 	}
 	inflateEnd(&strm);
 
-	switch (ret)
+	switch (err)
 	{
 	case Z_BUF_ERROR: // dst_len not big enought to hold inflated data
 		throw std::runtime_error("dst_len not big enought to hold inflated data");
@@ -344,11 +347,11 @@ inline std::vector<FileInZipData> CreateZipDirectory(std::istream& stream)
 {
 	// get buffer containing possible eocd
 
-	const ptrdiff_t eocd_size = _detail_::find_eocd_size(stream);
+	const ptrdiff_t eocd_size = _detail_str_::find_eocd_size(stream);
 
 	// first we need to search for the EOCD
 	stream.seekg(-eocd_size, std::ios::end);
-	auto eocd = _detail_::EndOfCentralDirectoryRecord(stream);
+	auto eocd = _detail_str_::EndOfCentralDirectoryRecord(stream);
 
 	// obtain central directory records
 	stream.seekg(eocd.offset);
@@ -358,7 +361,7 @@ inline std::vector<FileInZipData> CreateZipDirectory(std::istream& stream)
 
 	for (int i = 0; i < cd_amount; i++)
 	{
-		auto header = _detail_::CentralDirectoryHeader(stream);
+		auto header = _detail_str_::CentralDirectoryHeader(stream);
 		if (header.uncompressed_size == 0)
 		{
 			continue;
@@ -380,13 +383,13 @@ inline uint8_t* UncompressDeflateStream(FileInZipData& zipped_file, std::istream
 {
 	const auto cur_pos = stream.tellg();
 	stream.seekg(zipped_file.offset);
-	const _detail_::LocalFileHeader lfh(stream);
+	const _detail_str_::LocalFileHeader lfh(stream);
 
 	uint8_t* in_buffer = new uint8_t[lfh.compressed_size];
 	LUD_READ_BINARY_PTR(stream, in_buffer, lfh.compressed_size);
 
 	uint8_t* out_buffer = new uint8_t[lfh.uncompressed_size];
-	_detail_::uncompress_oneshot(in_buffer, lfh.compressed_size, out_buffer, lfh.uncompressed_size);
+	_detail_str_::uncompress_oneshot(in_buffer, lfh.compressed_size, out_buffer, lfh.uncompressed_size);
 
 	
 	delete[] in_buffer;
