@@ -6,7 +6,9 @@
 #include <string_view>
 #include <algorithm>
 #include <cwctype>
+#include <vector>
 #include <ranges>
+#include <string>
 
 namespace Lud
 {
@@ -61,8 +63,13 @@ template<typename T> concept NonStringContainer = requires( T param )
 	requires !_detail_::is_string_view_class<T>;
 };
 
-template<IntegerType N> N parse_num(std::string_view sv, int base=10);
-template<RealType N>    N parse_num(std::string_view sv, std::chars_format fmt=std::chars_format::general);
+template<IntegerType N> 
+[[deprecated("use Lud::is_num")]]
+N parse_num(std::string_view sv, int base=10);
+
+template<RealType N>    
+[[deprecated("use Lud::is_num")]] 
+N parse_num(std::string_view sv, std::chars_format fmt=std::chars_format::general);
 
 template<IntegerType N> std::optional<N> is_num(std::string_view sv, int base=10);
 template<RealType N>    std::optional<N> is_num(std::string_view sv, std::chars_format fmt=std::chars_format::general);
@@ -77,6 +84,7 @@ template<NonStringContainer wContainer> std::wstring wJoin(wContainer wcontainer
 
 template<typename  Iterator> std:: string  Join( Iterator  first,  Iterator  last, const std:: string_view  delim);
 template<typename wIterator> std::wstring wJoin(wIterator wfirst, wIterator wlast, const std::wstring_view wdelim);
+
 
 std:: string  RemovePrefix(const std:: string_view  str, const std:: string_view  prefix);
 std::wstring wRemovePrefix(const std::wstring_view wstr, const std::wstring_view wprefix);
@@ -149,16 +157,68 @@ std::wstring& wReverse(std::wstring& wstr);
 template<Lud::IntegerType N>
 N Lud::parse_num(const std::string_view sv, int base/*=10*/)
 {
+	auto check = ToUpper(Strip(sv));
+	inplace::RemovePrefix(check, "+");
+	if (base == 16)
+	{
+		inplace::RemovePrefix(check, "0X");
+	}
+	else if (base == 2)
+	{
+		inplace::RemovePrefix(check, "0B");
+	}
+	else if (base == 8)
+	{
+		inplace::RemovePrefix(check, "0O");
+		inplace::RemovePrefix(check, "0");
+	}
 	N val{};
-	std::from_chars(sv.data(), sv.data() + sv.size(), val, base);
+	std::from_chars(check.data(), check.data() + check.size(), val, base);
+	return val;
+}
+
+template<Lud::RealType N>
+N Lud::parse_num(const std::string_view sv, const std::chars_format fmt/*=std::chars_format::general)*/)
+{
+	auto check = ToUpper(Strip(sv));
+	if (std::to_underlying(fmt) & std::to_underlying(std::chars_format::hex))
+		inplace::RemovePrefix(check, "0X");
+	else
+		inplace::RemovePrefix(check, "+");
+	N val{};
+	std::from_chars(check.data(), check.data() + check.size(), val, fmt);
 	return val;
 }
 
 template<Lud::IntegerType N>
 std::optional<N> Lud::is_num(const std::string_view sv, int base/*=10*/)
 {
+	// house keeping since from chars does not recognize leading plus sign and leading whitespace
+	auto check = ToUpper(Strip(sv));
+	inplace::RemovePrefix(check, "+");
+	if (base == 16)
+	{
+		inplace::RemovePrefix(check, "0X");
+	}
+	else if (base == 2)
+	{
+		inplace::RemovePrefix(check, "0B");
+	}
+	else if (base == 8)
+	{
+		inplace::RemovePrefix(check, "0O");
+		inplace::RemovePrefix(check, "0");
+	}
+
 	N val{};
-	if (std::from_chars(sv.data(), sv.data() + sv.size(), val, base).ec == std::errc::invalid_argument)
+	const auto first = check.data();
+	const auto last = first + check.size(); 
+	const auto res = std::from_chars(first, last, val, base);
+	if (res.ec == std::errc::invalid_argument || res.ec == std::errc::result_out_of_range)
+	{
+		return std::nullopt;
+	}
+	if (res.ptr != last)
 	{
 		return std::nullopt;
 	}
@@ -167,18 +227,23 @@ std::optional<N> Lud::is_num(const std::string_view sv, int base/*=10*/)
 
 
 template<Lud::RealType N>
-N Lud::parse_num(const std::string_view sv, const std::chars_format fmt/*=std::chars_format::general)*/)
-{
-	N val{};
-	std::from_chars(sv.data(), sv.data() + sv.size(), val, fmt);
-	return val;
-}
-
-template<Lud::RealType N>
 std::optional<N> Lud::is_num(const std::string_view sv, const std::chars_format fmt/*=std::chars_format::general)*/)
 {
+	auto check = ToUpper(Strip(sv));
+	if (std::to_underlying(fmt) & std::to_underlying(std::chars_format::hex))
+		inplace::RemovePrefix(check, "0X");
+	else
+		inplace::RemovePrefix(check, "+");
+
 	N val{};
-	if (std::from_chars(sv.data(), sv.data() + sv.size(), val, fmt).ec == std::errc::invalid_argument)
+	const auto first = check.data();
+	const auto last = first + check.size(); 
+	const auto res = std::from_chars(first, last, val, fmt);
+	if (res.ec == std::errc::invalid_argument || res.ec == std::errc::result_out_of_range)
+	{
+		return std::nullopt;
+	}
+	if (res.ptr != last)
 	{
 		return std::nullopt;
 	}
@@ -276,11 +341,16 @@ inline std::string& Lud::inplace::RemoveSuffix(std::string& str, const std::stri
 inline std::vector<std::string> Lud::Split(const std::string_view str, const std::string_view delim, size_t n/*=0*/)
 {
 	std::vector<std::string> parts;
+	if (delim.empty())
+	{
+		parts.emplace_back(str);
+		return parts;
+	}
 	size_t next = str.find(delim);
 	std::string_view inner_str = str;
-
 	while (next != std::string_view::npos && (n != parts.size() || n == 0))
 	{
+		// skips empty
 		if (next != 0)
 		{
 			parts.emplace_back(inner_str.substr(0, next));
@@ -288,8 +358,10 @@ inline std::vector<std::string> Lud::Split(const std::string_view str, const std
 		inner_str.remove_prefix(next + delim.size());
 		next = inner_str.find(delim);
 	}
-
-	parts.emplace_back(inner_str);
+	if (inner_str.size() > 0)
+	{
+		parts.emplace_back(inner_str);
+	}
 
 	return parts;
 }
@@ -297,11 +369,17 @@ inline std::vector<std::string> Lud::Split(const std::string_view str, const std
 inline std::vector<std::wstring> Lud::wSplit(const std::wstring_view wstr, const std::wstring_view wdelim, size_t n/*=0*/)
 {
 	std::vector<std::wstring> parts;
+	if (wdelim.empty())
+	{
+		parts.emplace_back(wstr);
+		return parts;
+	}
 	size_t next = wstr.find(wdelim);
 	std::wstring_view inner_str = wstr;
 
 	while (next != std::wstring_view::npos && (n != parts.size() || n == 0))
 	{
+		// skips empty
 		if (next != 0)
 		{
 			parts.emplace_back(inner_str.substr(0, next));
@@ -310,7 +388,10 @@ inline std::vector<std::wstring> Lud::wSplit(const std::wstring_view wstr, const
 		next = inner_str.find(wdelim);
 	}
 
-	parts.emplace_back(inner_str);
+	if (inner_str.size() > 0)
+	{
+		parts.emplace_back(inner_str);
+	}
 
 	return parts;
 }
@@ -462,7 +543,7 @@ inline std::string Lud::RStrip(const std::string_view str)
 		return {};
 	}
 
-	return std::string(str.substr(0, idx));
+	return std::string(str.substr(0, idx+1));
 }
 
 inline std::wstring Lud::wRStrip(const std::wstring_view wstr)
@@ -475,7 +556,7 @@ inline std::wstring Lud::wRStrip(const std::wstring_view wstr)
 		return {};
 	}
 
-	return std::wstring(wstr.substr(0, idx));
+	return std::wstring(wstr.substr(0, idx+1));
 }
 
 inline std::string Lud::Strip(const std::string_view str)
@@ -611,14 +692,8 @@ inline std::string& Lud::inplace::RStrip(std::string& str)
 	const auto delims = "\t\n\r ";
 	const auto idx = str.find_last_not_of(delims);
 
-	if (idx == std::string::npos)
-	{
-		str.clear();
-	}
-	else
-	{
-		str.erase(idx + 1);
-	}
+	str.erase(idx + 1);
+
 	return str;
 }
 
@@ -627,14 +702,8 @@ inline std::wstring& Lud::inplace::wRStrip(std::wstring& wstr)
 	const auto delims = L"\t\n\r ";
 	const auto idx = wstr.find_last_not_of(delims);
 
-	if (idx == std::wstring::npos)
-	{
-		wstr.clear();
-	}
-	else
-	{
-		wstr.erase(idx + 1);
-	}
+	wstr.erase(idx + 1);
+
 	return wstr;
 }
 
@@ -644,15 +713,9 @@ inline std::string& Lud::inplace::Strip(std::string& str)
 	const auto first = str.find_first_not_of(delims);
 	const auto last = str.find_last_not_of(delims);
 
-	if (first == std::string::npos)
-	{
-		str.clear();
-	}
-	else
-	{
-		str.erase(0, first);
-		str.erase(last);
-	}
+	str.erase(last+1);
+	str.erase(0, first);
+
 	return str;
 }
 
@@ -662,15 +725,9 @@ inline std::wstring& Lud::inplace::wStrip(std::wstring& wstr)
 	const auto first = wstr.find_first_not_of(delims);
 	const auto last = wstr.find_last_not_of(delims);
 
-	if (first == std::wstring::npos)
-	{
-		wstr.clear();
-	}
-	else
-	{
-		wstr.erase(0, first);
-		wstr.erase(last);
-	}
+	wstr.erase(last+1);
+	wstr.erase(0, first);
+
 	return wstr;
 }
 
