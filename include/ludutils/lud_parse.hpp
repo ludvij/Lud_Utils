@@ -9,6 +9,7 @@
 #include <vector>
 #include <ranges>
 #include <string>
+#include <utility>
 
 namespace Lud
 {
@@ -49,18 +50,13 @@ concept string_container = requires(Range rng)
 	requires std::convertible_to<std::ranges::range_value_t<Range>, std::string_view>;
 };
 
-<<<<<<< HEAD
 template<typename wRange> 
-concept wstring_container = requires(wRange wrng)
+concept wstring_container = requires(wRange rng)
 {
 	requires std::ranges::range<wRange>;
 	requires std::convertible_to<std::ranges::range_value_t<wRange>, std::wstring_view>;
 };
 
-
-template<IntegerType N> N parse_num(std::string_view sv, int base=10);
-template<RealType N>    N parse_num(std::string_view sv, std::chars_format fmt=std::chars_format::general);
-=======
 template<IntegerType N> 
 [[deprecated("use Lud::is_num")]]
 N parse_num(std::string_view sv, int base=10);
@@ -68,7 +64,6 @@ N parse_num(std::string_view sv, int base=10);
 template<RealType N>    
 [[deprecated("use Lud::is_num")]] 
 N parse_num(std::string_view sv, std::chars_format fmt=std::chars_format::general);
->>>>>>> origin
 
 template<IntegerType N> std::optional<N> is_num(std::string_view sv, int base=10);
 template<RealType N>    std::optional<N> is_num(std::string_view sv, std::chars_format fmt=std::chars_format::general);
