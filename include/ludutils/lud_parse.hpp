@@ -39,27 +39,21 @@ concept RealType = requires( T param )
 };
 #endif//LUD_NUMBER_TYPE_DEFINED
 
-namespace _detail_
-{
-	// https://stackoverflow.com/a/72451771
-	// decay removes const, ref and volatile from type
-	template<typename T> inline constexpr bool is_string_class_decayed = false;
-	template<typename... T> inline constexpr bool is_string_class_decayed<std::basic_string<T...>> = true;
-	template<typename T> inline constexpr bool is_string_class = is_string_class_decayed<std::decay_t<T>>;
-	
-	template<typename T> inline constexpr bool is_string_view_class_decayed = false;
-	template<typename... T> inline constexpr bool is_string_view_class_decayed<std::basic_string_view<T...>> = true;
-	template<typename T> inline constexpr bool is_string_view_class = is_string_view_class_decayed<std::decay_t<T>>;
-}
 
-
-// a range that is not a basic_string or a basic_string_view specialization
-template<typename T> concept NonStringContainer = requires( T param )
+template<typename Range> 
+concept string_container = requires(Range rng)
 {
-	requires std::ranges::range<T>;
-	requires !_detail_::is_string_class<T>;
-	requires !_detail_::is_string_view_class<T>;
+	requires std::ranges::range<Range>;
+	requires std::convertible_to<std::ranges::range_value_t<Range>, std::string_view>;
 };
+
+template<typename wRange> 
+concept wstring_container = requires(wRange wrng)
+{
+	requires std::ranges::range<wRange>;
+	requires std::convertible_to<std::ranges::range_value_t<wRange>, std::wstring_view>;
+};
+
 
 template<IntegerType N> N parse_num(std::string_view sv, int base=10);
 template<RealType N>    N parse_num(std::string_view sv, std::chars_format fmt=std::chars_format::general);
@@ -72,8 +66,8 @@ template<RealType N>    std::optional<N> is_num(std::string_view sv, std::chars_
 std::vector<std:: string>  Split(const std:: string_view  str, const std:: string_view  delim, size_t n = 0);
 std::vector<std::wstring> wSplit(const std::wstring_view wstr, const std::wstring_view wdelim, size_t n = 0);
 
-template<NonStringContainer  Container> std:: string  Join( Container  container, const std:: string_view  delim);
-template<NonStringContainer wContainer> std::wstring wJoin(wContainer wcontainer, const std::wstring_view wdelim);
+template< string_container  Container> std:: string  Join(const  Container&  container, const std:: string_view  delim);
+template<wstring_container wContainer> std::wstring wJoin(const wContainer& wcontainer, const std::wstring_view wdelim);
 
 template<typename  Iterator> std:: string  Join( Iterator  first,  Iterator  last, const std:: string_view  delim);
 template<typename wIterator> std::wstring wJoin(wIterator wfirst, wIterator wlast, const std::wstring_view wdelim);
@@ -185,14 +179,14 @@ std::optional<N> Lud::is_num(const std::string_view sv, const std::chars_format 
 	return val;
 }
 
-template <Lud::NonStringContainer Container>
-std::string Lud::Join(Container container, const std::string_view delim)
+template <Lud::string_container Container> 
+std::string Lud::Join(const Container& container, const std::string_view delim)
 {
 	return Join(container.begin(), container.end(), delim);
 }
 
-template <Lud::NonStringContainer wContainer>
-std::wstring Lud::wJoin(wContainer wcontainer, const std::wstring_view wdelim)
+template <Lud::wstring_container wContainer> 
+std::wstring Lud::wJoin(const wContainer& wcontainer, const std::wstring_view wdelim)
 {
 	return Join(wcontainer.begin(), wcontainer.end(), wdelim);
 }
@@ -201,7 +195,7 @@ template <typename Iterator>
 std::string Lud::Join(Iterator first, Iterator last, const std::string_view delim)
 {
 	std::string res;
-	if (first == last)
+	if (first >= last)
 	{
 		return res;
 	}
@@ -219,7 +213,7 @@ template <typename wIterator>
 std::wstring Lud::wJoin(wIterator wfirst, wIterator wlast, const std::wstring_view wdelim)
 {
 	std::wstring res;
-	if (wfirst == wlast)
+	if (wfirst >= wlast)
 	{
 		return res;
 	}

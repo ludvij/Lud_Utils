@@ -15,11 +15,16 @@ concept ByteType = requires( T param )
 	requires sizeof param == 1;
 };
 
+
 template<ByteType T = char>
 class memory_streambuf : public std::streambuf
 {
 public:
 	memory_streambuf(T* ptr, size_t size);
+	memory_streambuf() = default;
+
+	void Link(T* ptr, size_t size);
+
 protected:
 	virtual pos_type seekoff(off_type off, std::ios_base::seekdir dir, std::ios_base::openmode which = std::ios_base::in) override;
 	virtual pos_type seekpos(pos_type pos, std::ios_base::openmode which = std::ios_base::in) override;
@@ -30,9 +35,16 @@ class memory_istream : public std::istream
 {
 public:
 	memory_istream(T* s, size_t n);
+
+	memory_istream() = default;
+
+	void Link(T* s, size_t n);
+	
 private:
 	memory_streambuf<T> m_buffer;
 };
+
+
 }
 
 #define LUD_READ_BINARY_PTR(stream, ptr, sz) stream.read(std::bit_cast<char*>(ptr), sz)
@@ -42,13 +54,13 @@ private:
 #define LUD_WRITE_BINARY(stream, var) LUD_WRITE_BINARY_PTR(stream, &var, sizeof var)
 
 template<Lud::ByteType T>
-inline Lud::memory_streambuf<T>::memory_streambuf(T* s, size_t n)
+Lud::memory_streambuf<T>::memory_streambuf(T* s, size_t n)
 {
-	auto cs = std::bit_cast<char*>( s );
-	setg(cs, cs, cs + n);
+	Link(s, n);
 }
+
 template<Lud::ByteType T>
-inline Lud::memory_streambuf<T>::pos_type Lud::memory_streambuf<T>::seekoff(off_type off, std::ios_base::seekdir dir, [[maybe_unused]] std::ios_base::openmode which)
+Lud::memory_streambuf<T>::pos_type Lud::memory_streambuf<T>::seekoff(off_type off, std::ios_base::seekdir dir, [[maybe_unused]] std::ios_base::openmode which)
 {
 	if (dir == std::ios_base::cur)
 		gbump(static_cast<int>( off ));
@@ -61,19 +73,35 @@ inline Lud::memory_streambuf<T>::pos_type Lud::memory_streambuf<T>::seekoff(off_
 
 
 template<Lud::ByteType T>
-inline Lud::memory_streambuf<T>::pos_type Lud::memory_streambuf<T>::seekpos(pos_type pos, [[maybe_unused]] std::ios_base::openmode which)
+Lud::memory_streambuf<T>::pos_type Lud::memory_streambuf<T>::seekpos(pos_type pos, [[maybe_unused]] std::ios_base::openmode which)
 {
 	setg(eback(), eback() + pos, egptr());
 	return gptr() - eback();
 }
 
+
+template <Lud::ByteType T>
+void Lud::memory_streambuf<T>::Link(T *ptr, size_t size)
+{
+	char* cs = std::bit_cast<char*>(ptr);
+	setg(cs, cs, cs + size);
+}
+
+
 template<Lud::ByteType T>
-inline Lud::memory_istream<T>::memory_istream(T* s, size_t n)
+Lud::memory_istream<T>::memory_istream(T* s, size_t n)
 	: std::istream(&m_buffer)
 	, m_buffer(s, n)
 {
 	rdbuf(&m_buffer);
 }
 
+
+
+template <Lud::ByteType T>
+void Lud::memory_istream<T>::Link(T *s, size_t n)
+{
+	m_buffer.Link(s, n);
+}
 
 #endif//!LUD_MEMORY_STREAM_HEADER

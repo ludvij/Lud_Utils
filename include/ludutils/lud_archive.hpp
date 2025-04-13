@@ -31,9 +31,11 @@ struct FileInZipData
 	uint32_t CRC_32;
 };
 
+[[nodiscard]]
 std::vector<FileInZipData> CreateZipDirectory(std::istream& stream);
 
-uint8_t* UncompressDeflateStream(FileInZipData& zipped_file, std::istream& stream);
+[[nodiscard]]
+std::vector<uint8_t> UncompressDeflateStream(FileInZipData& zipped_file, std::istream& stream);
 
 
 }
@@ -72,8 +74,12 @@ struct LocalFileHeader
 	std::string file_name{};
 	// made a ptr so it can be used with memory_istream
 	// maybe looking for better solutions
-	// it also shared since i don't want to deal with copying and raw ptrs rn
 	uint8_t* extra_field{};
+
+	LocalFileHeader(const LocalFileHeader& other) = delete;
+	LocalFileHeader(LocalFileHeader&& other) = delete;
+	LocalFileHeader& operator=(const LocalFileHeader& other) = delete;
+	LocalFileHeader& operator=(LocalFileHeader&& other) = delete;
 
 	explicit LocalFileHeader(std::istream& stream)
 	{
@@ -97,6 +103,11 @@ struct LocalFileHeader
 		
 		extra_field = new uint8_t[extra_field_length];
 		LUD_READ_BINARY_PTR(stream, extra_field, extra_field_length);
+	}
+
+	~LocalFileHeader()
+	{
+		delete[] extra_field;
 	}
 };
 
@@ -379,7 +390,7 @@ inline std::vector<FileInZipData> CreateZipDirectory(std::istream& stream)
 }
 
 
-inline uint8_t* UncompressDeflateStream(FileInZipData& zipped_file, std::istream& stream)
+inline std::vector<uint8_t> UncompressDeflateStream(FileInZipData& zipped_file, std::istream& stream)
 {
 	const auto cur_pos = stream.tellg();
 	stream.seekg(zipped_file.offset);
@@ -388,8 +399,9 @@ inline uint8_t* UncompressDeflateStream(FileInZipData& zipped_file, std::istream
 	uint8_t* in_buffer = new uint8_t[lfh.compressed_size];
 	LUD_READ_BINARY_PTR(stream, in_buffer, lfh.compressed_size);
 
-	uint8_t* out_buffer = new uint8_t[lfh.uncompressed_size];
-	_detail_str_::uncompress_oneshot(in_buffer, lfh.compressed_size, out_buffer, lfh.uncompressed_size);
+	// uint8_t* out_buffer = new uint8_t[lfh.uncompressed_size];
+	std::vector<uint8_t> out_buffer(lfh.uncompressed_size);
+	_detail_str_::uncompress_oneshot(in_buffer, lfh.compressed_size, out_buffer.data(), lfh.uncompressed_size);
 
 	
 	delete[] in_buffer;
