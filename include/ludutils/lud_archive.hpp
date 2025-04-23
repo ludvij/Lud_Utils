@@ -18,6 +18,7 @@
 #include <iostream>
 #include <streambuf>
 #include <vector>
+
 #include "zlib/zlib.h"
 
 namespace Lud
@@ -35,7 +36,7 @@ struct FileInZipData
 std::vector<FileInZipData> CreateZipDirectory(std::istream& stream);
 
 [[nodiscard]]
-std::vector<uint8_t> UncompressDeflateStream(FileInZipData& zipped_file, std::istream& stream);
+std::vector<uint8_t> UncompressDeflateStream(const FileInZipData& zipped_file, std::istream& stream);
 
 
 }
@@ -54,7 +55,7 @@ std::vector<uint8_t> UncompressDeflateStream(FileInZipData& zipped_file, std::is
 namespace Lud
 {
 	
-namespace _detail_str_
+namespace _detail_archive_
 {
 // https://pkwaredownloads.blob.core.windows.net/pkware-general/Documentation/APPNOTE-6.3.9.TXT
 struct LocalFileHeader
@@ -75,6 +76,9 @@ struct LocalFileHeader
 	// made a ptr so it can be used with memory_istream
 	// maybe looking for better solutions
 	uint8_t* extra_field{};
+
+	static constexpr uint16_t COMPRESSION_DEFLATE = 8;
+	static constexpr uint16_t COMPRESSION_NONE = 0;
 
 	LocalFileHeader(const LocalFileHeader& other) = delete;
 	LocalFileHeader(LocalFileHeader&& other) = delete;
@@ -237,23 +241,7 @@ struct DataDescriptor
 };
 
 
-// meant for LE, no size checking since this is only used in the context of find_eocd_size
-constexpr uint32_t u8x4_to_u32(const uint8_t* ptr)
-{
-	// return *std::bit_cast<uint32_t*>(ptr);
-	return ptr[0] | ptr[1] << 8 | ptr[2] << 16 | ptr[3] << 24;
-}
 
-// meant for LE, no size checking since this is only used in the context of find_eocd_size
-constexpr uint32_t u8x2_to_u16(const uint8_t* ptr)
-{
-	// return *std::bit_cast<uint16_t*>(ptr);
-	return ptr[0] | ptr[1] << 8;
-}
-
-
-//- TODO: make this work with an istream in order to make it work with files too
-// TODO: investigate if making a buffer is better than using the stream for searching
 size_t find_eocd_size(std::istream& stream)
 {
 	// find a signature 0x06054b50
@@ -262,48 +250,44 @@ size_t find_eocd_size(std::istream& stream)
 	// check that the EOCD ends at EOF
 	stream.seekg(0, std::ios::end);
 	const size_t file_size = stream.tellg();
-	const size_t max_eocd_size = 0xFFFF + _detail_str_::EndOfCentralDirectoryRecord::BASE_SIZE;
-	const size_t buf_size = std::min(max_eocd_size, file_size);
+	const size_t max_eocd_size = 0xFFFF + _detail_archive_::EndOfCentralDirectoryRecord::BASE_SIZE;
+	const size_t search_size = std::min(max_eocd_size, file_size);
 
-	const uint8_t* buf = new uint8_t[buf_size];
-	stream.seekg(-buf_size, std::ios::end);
-	LUD_READ_BINARY_PTR(stream, buf, buf_size);
 
 	// starts at the end - base EOCD size, iterates until min(max_uint16_t, file_size) + base EOCD size
 	const size_t eocd_size  = EndOfCentralDirectoryRecord::BASE_SIZE;
-	const size_t loop_end   = 0;
-	const size_t loop_begin = buf_size - eocd_size;
+	const size_t loop_end   = file_size - search_size;
+	const size_t loop_begin = file_size - eocd_size;
 
-	for (auto i = loop_begin; i >= loop_end; --i)
+	for (size_t i = loop_begin; i >= loop_end; --i)
 	{
-		if (buf[i] == 0x50 && buf[i + 1] == 0x4b)
+		stream.seekg(i);
+		int signature;
+		LUD_READ_BINARY(stream, signature);
+		if (signature == EndOfCentralDirectoryRecord::SIGNATURE)
 		{
-
-			const uint32_t sig = u8x4_to_u32(buf + i);
-			if (sig != EndOfCentralDirectoryRecord::SIGNATURE)
-			{
-				continue;
-			}
-			const auto offset = u8x4_to_u32(buf + i + EndOfCentralDirectoryRecord::OFFSET_OFFSET);
-			stream.seekg(offset, std::ios::beg);
+			stream.seekg(i + EndOfCentralDirectoryRecord::OFFSET_OFFSET);
+			uint32_t offset;
+			LUD_READ_BINARY(stream, offset);
+			stream.seekg(offset);
 			uint32_t dir_sig;
 			LUD_UNZIP_READ_BINARY(stream, dir_sig);
 			if (dir_sig != CentralDirectoryHeader::SIGNATURE)
 			{
 				continue;
 			}
-			const auto comment_sz = u8x2_to_u16(buf + i + EndOfCentralDirectoryRecord::COMMENT_L_OFFSET);
+			stream.seekg(i + EndOfCentralDirectoryRecord::COMMENT_L_OFFSET);
+			uint16_t comment_sz;
+			LUD_READ_BINARY(stream, comment_sz);
 			// eocd not at the end of file
-			if (i + eocd_size + comment_sz != buf_size)
+			if (i + eocd_size + comment_sz != file_size)
 			{
 				continue;
 			}
-			delete[] buf;
 			return eocd_size + comment_sz;
 		}
 	}
 	// should never happen
-	delete[] buf;
 	throw std::runtime_error("unable to find EOCD");
 }
 
@@ -340,14 +324,9 @@ size_t uncompress_oneshot(uint8_t* src, uint32_t src_len, uint8_t* dst, uint32_t
 	}
 	inflateEnd(&strm);
 
-	switch (err)
+	if (err != Z_OK)
 	{
-	case Z_BUF_ERROR: // dst_len not big enought to hold inflated data
-		throw std::runtime_error("dst_len not big enought to hold inflated data");
-	case Z_MEM_ERROR: // not enough memory, rip
-		throw std::runtime_error("not enough memory, rip");
-	case Z_DATA_ERROR: // input data invalid
-		throw std::runtime_error("input data invalid or corrupted");
+		return err;
 	}
 	return ret;
 
@@ -358,11 +337,11 @@ inline std::vector<FileInZipData> CreateZipDirectory(std::istream& stream)
 {
 	// get buffer containing possible eocd
 
-	const ptrdiff_t eocd_size = _detail_str_::find_eocd_size(stream);
+	const ptrdiff_t eocd_size = _detail_archive_::find_eocd_size(stream);
 
 	// first we need to search for the EOCD
 	stream.seekg(-eocd_size, std::ios::end);
-	auto eocd = _detail_str_::EndOfCentralDirectoryRecord(stream);
+	auto eocd = _detail_archive_::EndOfCentralDirectoryRecord(stream);
 
 	// obtain central directory records
 	stream.seekg(eocd.offset);
@@ -372,11 +351,7 @@ inline std::vector<FileInZipData> CreateZipDirectory(std::istream& stream)
 
 	for (int i = 0; i < cd_amount; i++)
 	{
-		auto header = _detail_str_::CentralDirectoryHeader(stream);
-		if (header.uncompressed_size == 0)
-		{
-			continue;
-		}
+		auto header = _detail_archive_::CentralDirectoryHeader(stream);
 		compressed_files_data.emplace_back(
 			header.file_name,
 			header.offset,
@@ -390,21 +365,41 @@ inline std::vector<FileInZipData> CreateZipDirectory(std::istream& stream)
 }
 
 
-inline std::vector<uint8_t> UncompressDeflateStream(FileInZipData& zipped_file, std::istream& stream)
+inline std::vector<uint8_t> UncompressDeflateStream(const FileInZipData& zipped_file, std::istream& stream)
 {
 	const auto cur_pos = stream.tellg();
 	stream.seekg(zipped_file.offset);
-	const _detail_str_::LocalFileHeader lfh(stream);
-
-	uint8_t* in_buffer = new uint8_t[lfh.compressed_size];
-	LUD_READ_BINARY_PTR(stream, in_buffer, lfh.compressed_size);
-
-	// uint8_t* out_buffer = new uint8_t[lfh.uncompressed_size];
+	const _detail_archive_::LocalFileHeader lfh(stream);
 	std::vector<uint8_t> out_buffer(lfh.uncompressed_size);
-	_detail_str_::uncompress_oneshot(in_buffer, lfh.compressed_size, out_buffer.data(), lfh.uncompressed_size);
+
+
+	if(lfh.compression_method == _detail_archive_::LocalFileHeader::COMPRESSION_DEFLATE)
+	{
+		int err = Z_OK;
+		uint8_t* in_buffer = new uint8_t[lfh.compressed_size];
+		LUD_READ_BINARY_PTR(stream, in_buffer, lfh.compressed_size);
+		err = _detail_archive_::uncompress_oneshot(in_buffer, lfh.compressed_size, out_buffer.data(), lfh.uncompressed_size);
+		delete[] in_buffer;
+		
+		switch (err)
+		{
+		case Z_BUF_ERROR: // dst_len not big enought to hold inflated data
+			throw std::runtime_error("dst_len not big enought to hold inflated data");
+		case Z_MEM_ERROR: // not enough memory, rip
+			throw std::runtime_error("not enough memory, rip");
+		case Z_DATA_ERROR: // input data invalid
+			throw std::runtime_error("input data invalid or corrupted");
+		}
+	}
+	else if (lfh.compression_method == _detail_archive_::LocalFileHeader::COMPRESSION_NONE)
+	{
+		LUD_READ_BINARY_PTR(stream, out_buffer.data(), lfh.uncompressed_size);
+	}
 
 	
-	delete[] in_buffer;
+	// uint8_t* out_buffer = new uint8_t[lfh.uncompressed_size];
+	
+	
 	stream.seekg(cur_pos);
 	return out_buffer;
 }

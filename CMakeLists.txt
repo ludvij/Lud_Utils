@@ -22,6 +22,8 @@ add_library(${PROJECT_NAME} INTERFACE)
 # this is just to make the files appear on IDEs
 target_sources(${PROJECT_NAME} PRIVATE ${HEADERS})
 
+target_compile_definitions(${PROJECT_NAME} INTERFACE CMAKE_EXPORT_COMPILE_COMMANDS=1)
+
 
 target_include_directories(${PROJECT_NAME} 
 	INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include

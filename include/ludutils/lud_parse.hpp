@@ -737,4 +737,5 @@ inline std::wstring& Lud::inplace::wReverse(std::wstring& wstr)
 	return wstr;
 }
 
+
 #endif//!LUD_PARSE_HEADER

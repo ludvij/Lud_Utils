@@ -16,6 +16,16 @@ concept ByteType = requires( T param )
 };
 
 
+
+template<typename R, typename C = uint8_t>
+concept BinaryRange = requires
+{
+	requires ByteType<C>;
+	requires std::ranges::forward_range<R>;
+	requires std::same_as<std::ranges::range_value_t<R>, C>;
+};
+
+
 template<ByteType T = char>
 class memory_streambuf : public std::streambuf
 {
