@@ -10,6 +10,7 @@
 #include <ranges>
 #include <string>
 #include <utility>
+#include <limits>
 
 namespace Lud
 {
@@ -65,8 +66,11 @@ template<RealType N>
 [[deprecated("use Lud::is_num")]] 
 N parse_num(std::string_view sv, std::chars_format fmt=std::chars_format::general);
 
-template<IntegerType N> std::optional<N> is_num(std::string_view sv, int base=10);
-template<RealType N>    std::optional<N> is_num(std::string_view sv, std::chars_format fmt=std::chars_format::general);
+template<IntegerType N> std::optional<N> is_num(const std::string_view sv, int base=10);
+template<RealType N>    std::optional<N> is_num(const std::string_view sv, std::chars_format fmt=std::chars_format::general);
+
+template<RealType N> std::optional<N> is_fraction(const std::string_view sv);
+template<RealType N> std::optional<N> is_percentage(const std::string_view sv);
 
 
 // TODO: look how to template this
@@ -242,6 +246,54 @@ std::optional<N> Lud::is_num(const std::string_view sv, const std::chars_format 
 		return std::nullopt;
 	}
 	return val;
+}
+
+template <Lud::RealType N>
+std::optional<N> Lud::is_fraction(const std::string_view sv)
+{
+	if (!sv.contains("/"))
+	{
+		return std::nullopt;
+	}
+	auto parts = Lud::Split(sv, "/");
+	if (parts.size() != 2)
+	{
+		return std::nullopt;
+	}
+
+	auto numerator = Lud::is_num<N>(parts[0]);
+	auto denominator = Lud::is_num<N>(parts[1]);
+
+	if (!(numerator && denominator))
+	{
+		return std::nullopt;
+	}
+	if (denominator.value() == 0)
+	{
+		return std::numeric_limits<N>::quiet_NaN();
+	}
+	return numerator.value() / denominator.value();
+}
+
+template <Lud::RealType N>
+std::optional<N> Lud::is_percentage(const std::string_view sv)
+{
+	auto check = Lud::Strip(sv);
+	const auto first = check.find_first_of("%");
+	if (!(first != std::string::npos && first == check.find_last_of("%")))
+	{
+		return std::nullopt;
+	}
+
+	Lud::inplace::RemoveSuffix(check, "%");
+
+	auto num = Lud::is_num<N>(check);
+	if (!num)
+	{
+		return std::nullopt;
+	}
+	
+	return num.value() / 100.0f;
 }
 
 template <Lud::string_container Container> 

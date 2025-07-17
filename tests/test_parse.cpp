@@ -613,3 +613,55 @@ TEST_CASE( "IS Num Real", "[parse][numbers][real]")
 
 	}
 }
+
+TEST_CASE("Is fraction", "[parse][numbers][real]")
+{
+	SECTION("Simple") {
+		REQUIRE(Lud::is_fraction<double>("1/2").value() == 1.f/2.f);
+		REQUIRE(Lud::is_fraction<double>("2/1").value() == 2.f);
+		REQUIRE(Lud::is_fraction<double>("1.0/2.0").value() == 1.f/2.f);
+		REQUIRE(Lud::is_fraction<double>("1.5/4.0").value() == 1.5f/4.f);
+	}
+
+	SECTION("spaced") {
+		REQUIRE(Lud::is_fraction<double>("1 / 2").value() == 1.f/2.f);
+		REQUIRE(Lud::is_fraction<double>("1/ 2").value() == 1.f/2.f);
+		REQUIRE(Lud::is_fraction<double>("1 /2").value() == 1.f/2.f);
+		REQUIRE(Lud::is_fraction<double>("1   /   2").value() == 1.f/2.f);
+	}
+
+	SECTION("bad parse") {
+		REQUIRE(!Lud::is_fraction<double>("1/"));
+		REQUIRE(!Lud::is_fraction<double>("/1"));
+		REQUIRE(!Lud::is_fraction<double>("a/b"));
+		REQUIRE(!Lud::is_fraction<double>("1/b"));
+		REQUIRE(!Lud::is_fraction<double>("a/1"));
+		REQUIRE(!Lud::is_fraction<double>("1"));
+		REQUIRE(!Lud::is_fraction<double>("2"));
+	}
+
+	SECTION("limits") {
+		REQUIRE(Lud::is_fraction<double>("0 / 2").value() == 0.0f);
+		REQUIRE(std::isnan(Lud::is_fraction<double>("1 / 0").value()));
+	}
+}
+
+TEST_CASE("Is Percentage", "[parse][numbers][real]")
+{
+	SECTION("Simple") {
+		REQUIRE(Lud::is_percentage<double>("23%").value() == .23);
+		REQUIRE(Lud::is_percentage<double>("0%").value() == .0);
+		REQUIRE(Lud::is_percentage<double>("100%").value() == 1.0);
+		REQUIRE(Lud::is_percentage<double>("0.23%").value() == 0.0023);
+		REQUIRE(Lud::is_percentage<double>("1000%").value() == 10);
+	}
+
+	SECTION("Bad parse") {
+		REQUIRE(!Lud::is_percentage<double>("23"));
+		REQUIRE(!Lud::is_percentage<double>("23%%"));
+		REQUIRE(!Lud::is_percentage<double>("%23"));
+		REQUIRE(!Lud::is_percentage<double>("%23%"));
+		REQUIRE(!Lud::is_percentage<double>("a%"));
+		REQUIRE(!Lud::is_percentage<double>("a"));
+	}
+}
