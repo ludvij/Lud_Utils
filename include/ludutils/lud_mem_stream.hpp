@@ -9,6 +9,7 @@
 #include <vector>
 #include <span>
 
+
 namespace Lud
 {
 
@@ -42,17 +43,33 @@ public:
 protected:
 	virtual pos_type seekoff(off_type off, std::ios_base::seekdir dir, std::ios_base::openmode which = std::ios_base::in) override;
 	virtual pos_type seekpos(pos_type pos, std::ios_base::openmode which = std::ios_base::in) override;
+
+	virtual int_type underflow() override;
 };
 
 template<ByteType T = char>
 class vector_wrap_streambuf : public std::streambuf
 {
 public:
-	vector_wrap_streambuf(std::vector<T>& buffer);
+	using Base = std::streambuf;
 
+	vector_wrap_streambuf(std::vector<T>& buffer, std::ios_base::openmode = std::ios::out | std::ios::trunc);
 	
 protected:
+
+	virtual int_type overflow(int_type ch = traits_type::eof()) override;
+
+	virtual std::streamsize xsputn(const char_type* s, std::streamsize count) override;
+
+
 private:
+	constexpr void set_put_area_pointers();
+
+	constexpr void reserve_additional(size_t sz);
+
+private:
+	bool m_append = false;
+	size_t m_original_size = 0;
 	std::vector<T>& m_buffer;
 };
 
@@ -67,6 +84,7 @@ public:
 	void Link(std::span<T> data);
 	
 private:
+	
 	view_streambuf<T> m_buffer;
 };
 
@@ -124,6 +142,14 @@ Lud::view_streambuf<T>::pos_type Lud::view_streambuf<T>::seekpos(pos_type pos, s
 }
 
 
+template<Lud::ByteType T>
+Lud::view_streambuf<T>::int_type Lud::view_streambuf<T>::underflow()
+{
+	// reached end of file
+	return traits_type::eof();
+}
+
+
 
 template <Lud::ByteType T>
 void Lud::view_streambuf<T>::Link(std::span<T> data)
@@ -152,12 +178,83 @@ void Lud::memory_istream<T>::Link(std::span<T> data)
 
 
 template <Lud::ByteType T>
-Lud::vector_wrap_streambuf<T>::vector_wrap_streambuf(std::vector<T> &buffer)
+Lud::vector_wrap_streambuf<T>::vector_wrap_streambuf(std::vector<T> &buffer, std::ios_base::openmode mode)
 	: m_buffer(buffer)
 {
-	const char* cs = std::bit_cast<char*>(m_buffer.data());
-	setg(cs, cs, cs + m_buffer.size());
-	setp(cs, cs + m_buffer.size());
+	if (mode & std::ios::trunc)
+	{
+		m_buffer.clear();
+	}
+	
+	char* cs = std::bit_cast<char*>(m_buffer.data());
+	
+	if (mode & std::ios::app) 
+	{
+		m_append = true;
+		m_original_size = m_buffer.size();
+		Base::setp(cs + m_original_size, cs + m_original_size + m_buffer.capacity());
+	}
+	if (mode & std::ios::ate)
+	{
+		Base::setp(cs, cs + m_buffer.capacity());
+		Base::pbump(m_buffer.size());
+	}
 }
+
+
+
+template<Lud::ByteType T>
+Lud::vector_wrap_streambuf<T>::int_type Lud::vector_wrap_streambuf<T>::overflow(Lud::vector_wrap_streambuf<T>::int_type ch)
+{
+	reserve_additional(1);
+	m_buffer.push_back(static_cast<T>(ch));
+	pbump(1);
+	return ch;
+}
+
+
+
+template<Lud::ByteType T>
+constexpr void Lud::vector_wrap_streambuf<T>::set_put_area_pointers()
+{
+	char* cs = std::bit_cast<char*>(m_buffer.data());
+
+	// can't use m_buffer::size in case of append mode since append mode should not allow repositioning 
+	// pointers before original eof
+	const ptrdiff_t dist = Base::pptr() - Base::pbase();
+
+	if (m_append)
+	{
+		Base::setp(cs + m_original_size, cs + m_original_size + m_buffer.capacity());
+	}
+	else
+	{
+		Base::setp(cs, cs + m_buffer.capacity());
+	}
+
+	Base::pbump(dist);
+}
+
+template<Lud::ByteType T>
+constexpr void Lud::vector_wrap_streambuf<T>::reserve_additional(size_t sz)
+{
+	m_buffer.reserve(m_buffer.size() + sz);
+	set_put_area_pointers();
+}
+
+
+template<Lud::ByteType T>
+std::streamsize Lud::vector_wrap_streambuf<T>::xsputn(const Lud::vector_wrap_streambuf<T>::char_type* s, std::streamsize count)
+{
+	reserve_additional(count);
+	m_buffer.resize(m_buffer.size() + count);
+
+	traits_type::copy(Base::pptr(), s, count);
+
+	Base::pbump(count);
+
+	return count;
+}
+
 
 #endif//!LUD_MEMORY_STREAM_HEADER
