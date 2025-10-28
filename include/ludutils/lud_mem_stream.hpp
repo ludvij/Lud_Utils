@@ -13,6 +13,13 @@
 namespace Lud
 {
 
+	
+#define LUD_READ_BINARY_PTR(stream, ptr, sz) stream.read(std::bit_cast<char*>(ptr), sz)
+#define LUD_READ_BINARY(stream, var) LUD_READ_BINARY_PTR(stream, &var, sizeof var)
+
+#define LUD_WRITE_BINARY_PTR(stream, ptr, sz) stream.write(std::bit_cast<char*>(ptr), sz)
+#define LUD_WRITE_BINARY(stream, var) LUD_WRITE_BINARY_PTR(stream, &var, sizeof var)
+
 template<typename T>
 concept ByteType = requires( T param )
 {
@@ -35,6 +42,8 @@ template<ByteType T = char>
 class view_streambuf : public std::streambuf
 {
 public:
+	using Base = std::streambuf;
+
 	view_streambuf(std::span<T> data);
 	view_streambuf() = default;
 
@@ -53,7 +62,8 @@ class vector_wrap_streambuf : public std::streambuf
 public:
 	using Base = std::streambuf;
 
-	vector_wrap_streambuf(std::vector<T>& buffer, std::ios_base::openmode = std::ios::out | std::ios::trunc);
+	vector_wrap_streambuf(std::vector<T>& buffer, std::ios_base::openmode);
+	~vector_wrap_streambuf();
 	
 protected:
 
@@ -61,11 +71,18 @@ protected:
 
 	virtual std::streamsize xsputn(const char_type* s, std::streamsize count) override;
 
+	virtual int sync() override;
+
+	virtual pos_type seekoff(off_type off, std::ios_base::seekdir dir, std::ios_base::openmode which) override;
+	virtual pos_type seekpos(pos_type pos, std::ios_base::openmode which) override;
 
 private:
-	constexpr void set_put_area_pointers();
+	constexpr void set_pg_area_pointers();
 
-	constexpr void reserve_additional(size_t sz);
+	constexpr void increase_capacity(size_t sz);
+
+	pos_type seekoff_get_area(off_type off, std::ios_base::seekdir dir, std::ios_base::openmode which);
+	pos_type seekoff_put_area(off_type off, std::ios_base::seekdir dir, std::ios_base::openmode which);
 
 private:
 	bool m_append = false;
@@ -90,22 +107,16 @@ private:
 
 
 
-}
 
-#define LUD_READ_BINARY_PTR(stream, ptr, sz) stream.read(std::bit_cast<char*>(ptr), sz)
-#define LUD_READ_BINARY(stream, var) LUD_READ_BINARY_PTR(stream, &var, sizeof var)
 
-#define LUD_WRITE_BINARY_PTR(stream, ptr, sz) stream.write(std::bit_cast<char*>(ptr), sz)
-#define LUD_WRITE_BINARY(stream, var) LUD_WRITE_BINARY_PTR(stream, &var, sizeof var)
-
-template<Lud::ByteType T>
-Lud::view_streambuf<T>::view_streambuf(std::span<T> data)
+template<ByteType T>
+view_streambuf<T>::view_streambuf(std::span<T> data)
 {
 	Link(data);
 }
 
-template<Lud::ByteType T>
-Lud::view_streambuf<T>::pos_type Lud::view_streambuf<T>::seekoff(off_type off, std::ios_base::seekdir dir, std::ios_base::openmode which)
+template<ByteType T>
+view_streambuf<T>::pos_type view_streambuf<T>::seekoff(off_type off, std::ios_base::seekdir dir, std::ios_base::openmode which)
 {
 	if (which & std::ios_base::out)
 	{
@@ -114,36 +125,30 @@ Lud::view_streambuf<T>::pos_type Lud::view_streambuf<T>::seekoff(off_type off, s
 
 	if (dir == std::ios_base::cur)
 	{
-		gbump(static_cast<int>( off ));
+		Base::gbump(static_cast<int>( off ));
 	}
 	else if (dir == std::ios_base::end)
 	{
-		setg(eback(), egptr() + off, egptr());
+		Base::setg(Base::eback(), Base::egptr() + off, Base::egptr());
 	}
 	else if (dir == std::ios_base::beg)
 	{
-		setg(eback(), eback() + off, egptr());
+		Base::setg(Base::eback(), Base::eback() + off, Base::egptr());
 	}
 	
-	return gptr() - eback();
+	return Base::gptr() - Base::eback();
 }
 
 
-template<Lud::ByteType T>
-Lud::view_streambuf<T>::pos_type Lud::view_streambuf<T>::seekpos(pos_type pos, std::ios_base::openmode which)
+template<ByteType T>
+view_streambuf<T>::pos_type view_streambuf<T>::seekpos(pos_type pos, std::ios_base::openmode which)
 {
-	if (which & std::ios_base::out)
-	{
-		throw std::runtime_error("Writing is currently not supported!");
-	}
-
-	setg(eback(), eback() + pos, egptr());
-	return gptr() - eback();
+	return seekoff(pos, std::ios::beg, which);
 }
 
 
-template<Lud::ByteType T>
-Lud::view_streambuf<T>::int_type Lud::view_streambuf<T>::underflow()
+template<ByteType T>
+view_streambuf<T>::int_type view_streambuf<T>::underflow()
 {
 	// reached end of file
 	return traits_type::eof();
@@ -151,16 +156,16 @@ Lud::view_streambuf<T>::int_type Lud::view_streambuf<T>::underflow()
 
 
 
-template <Lud::ByteType T>
-void Lud::view_streambuf<T>::Link(std::span<T> data)
+template <ByteType T>
+void view_streambuf<T>::Link(std::span<T> data)
 {
 	char* cs = std::bit_cast<char*>(data.data());
 	setg(cs, cs, cs + data.size());
 }
 
 
-template<Lud::ByteType T>
-Lud::memory_istream<T>::memory_istream(std::span<T> data)
+template<ByteType T>
+memory_istream<T>::memory_istream(std::span<T> data)
 	: std::istream(&m_buffer)
 	, m_buffer(data)
 {
@@ -169,21 +174,22 @@ Lud::memory_istream<T>::memory_istream(std::span<T> data)
 
 
 
-template <Lud::ByteType T>
-void Lud::memory_istream<T>::Link(std::span<T> data)
+template <ByteType T>
+void memory_istream<T>::Link(std::span<T> data)
 {
 	m_buffer.Link(data);
 }
 
 
 
-template <Lud::ByteType T>
-Lud::vector_wrap_streambuf<T>::vector_wrap_streambuf(std::vector<T> &buffer, std::ios_base::openmode mode)
+template <ByteType T>
+vector_wrap_streambuf<T>::vector_wrap_streambuf(std::vector<T> &buffer, std::ios_base::openmode mode)
 	: m_buffer(buffer)
 {
-	if (mode & std::ios::trunc)
+	if ((mode & std::ios::trunc) && !m_buffer.empty())
 	{
 		m_buffer.clear();
+		m_buffer.shrink_to_fit();
 	}
 	
 	char* cs = std::bit_cast<char*>(m_buffer.data());
@@ -199,29 +205,27 @@ Lud::vector_wrap_streambuf<T>::vector_wrap_streambuf(std::vector<T> &buffer, std
 		Base::setp(cs, cs + m_buffer.capacity());
 		Base::pbump(m_buffer.size());
 	}
+	Base::setg(cs, cs, Base::pptr());
 }
 
-
-
-template<Lud::ByteType T>
-Lud::vector_wrap_streambuf<T>::int_type Lud::vector_wrap_streambuf<T>::overflow(Lud::vector_wrap_streambuf<T>::int_type ch)
+template <Lud::ByteType T>
+Lud::vector_wrap_streambuf<T>::~vector_wrap_streambuf()
 {
-	reserve_additional(1);
-	m_buffer.push_back(static_cast<T>(ch));
-	pbump(1);
-	return ch;
+	sync();
 }
 
 
 
-template<Lud::ByteType T>
-constexpr void Lud::vector_wrap_streambuf<T>::set_put_area_pointers()
+
+template<ByteType T>
+constexpr void vector_wrap_streambuf<T>::set_pg_area_pointers()
 {
 	char* cs = std::bit_cast<char*>(m_buffer.data());
 
 	// can't use m_buffer::size in case of append mode since append mode should not allow repositioning 
 	// pointers before original eof
-	const ptrdiff_t dist = Base::pptr() - Base::pbase();
+	const ptrdiff_t p_dist = Base::pptr() - Base::pbase();
+	const ptrdiff_t g_dist = Base::gptr() - Base::eback();
 
 	if (m_append)
 	{
@@ -232,28 +236,163 @@ constexpr void Lud::vector_wrap_streambuf<T>::set_put_area_pointers()
 		Base::setp(cs, cs + m_buffer.capacity());
 	}
 
-	Base::pbump(dist);
+	Base::pbump(p_dist);
+
+	Base::setg(cs, cs + g_dist, Base::pptr());
 }
 
-template<Lud::ByteType T>
-constexpr void Lud::vector_wrap_streambuf<T>::reserve_additional(size_t sz)
+template<ByteType T>
+constexpr void vector_wrap_streambuf<T>::increase_capacity(size_t sz)
 {
-	m_buffer.reserve(m_buffer.size() + sz);
-	set_put_area_pointers();
+	// this is called in xsputn and overflow
+	// so in order to reduce reallocations we will be copying
+	// std::vector approach and doubling size when we are out of room
+	// if there is enough room we will do nothing
+	if (m_buffer.size() + sz >= m_buffer.capacity())
+	{
+		std::size_t next_size = std::max(
+			m_buffer.size() + sz,
+			static_cast<size_t>(m_buffer.size() * 1.5)
+		);
+		m_buffer.reserve(next_size);
+		set_pg_area_pointers();
+	}
+	m_buffer.resize(m_buffer.size() + sz);
+
+}
+
+template<ByteType T>
+std::streamsize vector_wrap_streambuf<T>::xsputn(const vector_wrap_streambuf<T>::char_type* s, std::streamsize count)
+{
+	try 
+	{
+		increase_capacity(count);
+	}
+	catch(const std::bad_alloc& e)
+	{
+		
+	}
+
+
+	std::streamsize written = Base::xsputn(s, count);
+	Base::setg(Base::eback(), Base::gptr(), Base::pptr());
+
+	return written;
+}
+
+// https://gist.github.com/stephanlachnit/272e5eb82c0e2a1cccd55af5d6b73e2b
+template<ByteType T>
+vector_wrap_streambuf<T>::int_type vector_wrap_streambuf<T>::overflow(vector_wrap_streambuf<T>::int_type ch)
+{
+	try 
+	{
+		increase_capacity(sizeof(char_type));
+	}
+	catch (const std::bad_alloc& e)
+	{
+		return traits_type::eof();
+	}
+
+	if (!traits_type::eq_int_type(ch, traits_type::eof()))
+	{
+		// char_type ch_char = traits_type::to_char_type(ch);
+		// traits_type::copy(pptr(), &ch_char, 1);
+		// https://eel.is/c++draft/streambuf.virtuals#streambuf.virt.put-4.3
+		// setp(pptr(), epptr());
+		m_buffer[pptr() - pbase()] = static_cast<T>(ch);
+		pbump(sizeof(char_type));
+	}
+	return traits_type::not_eof(ch);
 }
 
 
-template<Lud::ByteType T>
-std::streamsize Lud::vector_wrap_streambuf<T>::xsputn(const Lud::vector_wrap_streambuf<T>::char_type* s, std::streamsize count)
+
+template<ByteType T>
+int vector_wrap_streambuf<T>::sync()
 {
-	reserve_additional(count);
-	m_buffer.resize(m_buffer.size() + count);
+	m_buffer.shrink_to_fit();
+	set_pg_area_pointers();
 
-	traits_type::copy(Base::pptr(), s, count);
+	return 0;
+}
 
-	Base::pbump(count);
 
-	return count;
+template<ByteType T>
+vector_wrap_streambuf<T>::pos_type vector_wrap_streambuf<T>::seekoff(off_type off, std::ios_base::seekdir dir, std::ios_base::openmode which)
+{
+	if (which & std::ios::in)
+	{
+		return seekoff_get_area(off, dir, which);
+	}
+	else if (which & std::ios::out)
+	{
+		if (dir == std::ios_base::cur)
+		{
+			Base::pbump(static_cast<int>(off));
+		}
+		else if (dir == std::ios::end)
+		{
+			char* cs = std::bit_cast<char*>(m_buffer.data());
+			Base::setp(cs, cs + m_buffer.capacity());
+			Base::pbump(m_buffer.capacity() + off);
+		}
+		else if (dir == std::ios::beg)
+		{
+			char* cs = std::bit_cast<char*>(m_buffer.data());
+			Base::setp(cs, cs + m_buffer.capacity());
+			Base::pbump(static_cast<int>(off));
+		}
+		return Base::pptr() - Base::pbase();
+	}
+	return 0;
+	
+}
+
+template<ByteType T>
+vector_wrap_streambuf<T>::pos_type vector_wrap_streambuf<T>::seekpos(pos_type pos, std::ios_base::openmode which)
+{
+	return seekoff(pos, std::ios::beg, which);
+}
+
+
+
+template <ByteType T>
+vector_wrap_streambuf<T>::pos_type vector_wrap_streambuf<T>::seekoff_get_area(off_type off, std::ios_base::seekdir dir, std::ios_base::openmode which)
+{
+	switch (dir)
+	{
+	case std::ios::cur: 
+	{
+		if (gptr() + off > egptr())
+		{
+			throw std::runtime_error("get ptr offset out of bounds");
+		}
+		Base::gbump(static_cast<int>( off ));
+		break;
+	}	
+	case std::ios::end: 
+	{
+		if (off > 0)
+		{
+			throw std::runtime_error("offset can not be positive while seeking from end");
+		}
+		Base::setg(Base::eback(), Base::egptr() + off, Base::egptr());
+		break;
+	} 
+	case std::ios::beg: 
+	{
+		if (off > Base::egptr() - Base::eback())
+		{
+			throw std::runtime_error("get ptr offset out of bounds");
+		}
+		Base::setg(Base::eback(), Base::eback() + off, Base::egptr());
+		break;
+	} 
+	}
+	return Base::gptr() - Base::eback();
+}
+
+
 }
 
 
