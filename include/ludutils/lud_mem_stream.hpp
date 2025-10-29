@@ -36,7 +36,7 @@ concept BinaryRange = requires
 	requires std::same_as<std::ranges::range_value_t<R>, C>;
 };
 
-// C++ standard does not provide char_trais spect for
+// C++ standard does not provide char_traits specification for
 // uint8_t and recommends just casting when using binary data
 template<ByteType T = char>
 class view_streambuf : public std::streambuf
@@ -52,8 +52,6 @@ public:
 protected:
 	virtual pos_type seekoff(off_type off, std::ios_base::seekdir dir, std::ios_base::openmode which = std::ios_base::in) override;
 	virtual pos_type seekpos(pos_type pos, std::ios_base::openmode which = std::ios_base::in) override;
-
-	virtual int_type underflow() override;
 };
 
 template<ByteType T = char>
@@ -81,8 +79,11 @@ private:
 
 	constexpr void increase_capacity(size_t sz);
 
-	pos_type seekoff_get_area(off_type off, std::ios_base::seekdir dir, std::ios_base::openmode which);
-	pos_type seekoff_put_area(off_type off, std::ios_base::seekdir dir, std::ios_base::openmode which);
+	constexpr pos_type seekoff_get_area(off_type off, std::ios_base::seekdir dir, std::ios_base::openmode which);
+	constexpr pos_type seekoff_put_area(off_type off, std::ios_base::seekdir dir, std::ios_base::openmode which);
+
+	constexpr size_t get_put_area_size() const;
+	constexpr size_t get_get_area_size() const;
 
 private:
 	bool m_append = false;
@@ -146,13 +147,6 @@ view_streambuf<T>::pos_type view_streambuf<T>::seekpos(pos_type pos, std::ios_ba
 	return seekoff(pos, std::ios::beg, which);
 }
 
-
-template<ByteType T>
-view_streambuf<T>::int_type view_streambuf<T>::underflow()
-{
-	// reached end of file
-	return traits_type::eof();
-}
 
 
 
@@ -262,7 +256,7 @@ constexpr void vector_wrap_streambuf<T>::increase_capacity(size_t sz)
 }
 
 template<ByteType T>
-std::streamsize vector_wrap_streambuf<T>::xsputn(const vector_wrap_streambuf<T>::char_type* s, std::streamsize count)
+std::streamsize vector_wrap_streambuf<T>::xsputn(const char_type* s, std::streamsize count)
 {
 	try 
 	{
@@ -270,9 +264,9 @@ std::streamsize vector_wrap_streambuf<T>::xsputn(const vector_wrap_streambuf<T>:
 	}
 	catch(const std::bad_alloc& e)
 	{
-		
+		// feels icky, but if increase_capacity fails Base::xsptun() should end up calling overflow
+		// this probably has a shit ton of errors, should be tested
 	}
-
 
 	std::streamsize written = Base::xsputn(s, count);
 	Base::setg(Base::eback(), Base::gptr(), Base::pptr());
@@ -282,7 +276,7 @@ std::streamsize vector_wrap_streambuf<T>::xsputn(const vector_wrap_streambuf<T>:
 
 // https://gist.github.com/stephanlachnit/272e5eb82c0e2a1cccd55af5d6b73e2b
 template<ByteType T>
-vector_wrap_streambuf<T>::int_type vector_wrap_streambuf<T>::overflow(vector_wrap_streambuf<T>::int_type ch)
+vector_wrap_streambuf<T>::int_type vector_wrap_streambuf<T>::overflow(int_type ch)
 {
 	try 
 	{
@@ -324,27 +318,11 @@ vector_wrap_streambuf<T>::pos_type vector_wrap_streambuf<T>::seekoff(off_type of
 	{
 		return seekoff_get_area(off, dir, which);
 	}
-	else if (which & std::ios::out)
+	if (which & std::ios::out)
 	{
-		if (dir == std::ios_base::cur)
-		{
-			Base::pbump(static_cast<int>(off));
-		}
-		else if (dir == std::ios::end)
-		{
-			char* cs = std::bit_cast<char*>(m_buffer.data());
-			Base::setp(cs, cs + m_buffer.capacity());
-			Base::pbump(m_buffer.capacity() + off);
-		}
-		else if (dir == std::ios::beg)
-		{
-			char* cs = std::bit_cast<char*>(m_buffer.data());
-			Base::setp(cs, cs + m_buffer.capacity());
-			Base::pbump(static_cast<int>(off));
-		}
-		return Base::pptr() - Base::pbase();
+		return seekoff_put_area(off, dir, which);
 	}
-	return 0;
+	throw std::invalid_argument("which must be either std::ios::in or std::ios::out");
 	
 }
 
@@ -357,7 +335,7 @@ vector_wrap_streambuf<T>::pos_type vector_wrap_streambuf<T>::seekpos(pos_type po
 
 
 template <ByteType T>
-vector_wrap_streambuf<T>::pos_type vector_wrap_streambuf<T>::seekoff_get_area(off_type off, std::ios_base::seekdir dir, std::ios_base::openmode which)
+constexpr vector_wrap_streambuf<T>::pos_type vector_wrap_streambuf<T>::seekoff_get_area(off_type off, std::ios_base::seekdir dir, std::ios_base::openmode which)
 {
 	switch (dir)
 	{
@@ -365,25 +343,25 @@ vector_wrap_streambuf<T>::pos_type vector_wrap_streambuf<T>::seekoff_get_area(of
 	{
 		if (gptr() + off > egptr())
 		{
-			throw std::runtime_error("get ptr offset out of bounds");
+			throw std::range_error("get ptr offset out of bounds");
 		}
 		Base::gbump(static_cast<int>( off ));
 		break;
 	}	
 	case std::ios::end: 
 	{
-		if (off > 0)
+		if (off > 0 || static_cast<size_t>(-off) > get_get_area_size())
 		{
-			throw std::runtime_error("offset can not be positive while seeking from end");
+			throw std::range_error("get ptr offset out of bounds");
 		}
 		Base::setg(Base::eback(), Base::egptr() + off, Base::egptr());
 		break;
 	} 
 	case std::ios::beg: 
 	{
-		if (off > Base::egptr() - Base::eback())
+		if (off < 0 || static_cast<size_t>(off) > get_get_area_size())
 		{
-			throw std::runtime_error("get ptr offset out of bounds");
+			throw std::range_error("get ptr offset out of bounds");
 		}
 		Base::setg(Base::eback(), Base::eback() + off, Base::egptr());
 		break;
@@ -392,8 +370,49 @@ vector_wrap_streambuf<T>::pos_type vector_wrap_streambuf<T>::seekoff_get_area(of
 	return Base::gptr() - Base::eback();
 }
 
-
+template <ByteType T>
+constexpr vector_wrap_streambuf<T>::pos_type vector_wrap_streambuf<T>::seekoff_put_area(off_type off, std::ios_base::seekdir dir, std::ios_base::openmode which)
+{
+	if (dir == std::ios_base::cur)
+	{
+		if (off + Base::pptr() > Base::epptr())
+		{
+			throw std::out_of_range("put ptr offset out of range");
+		}
+		Base::pbump(static_cast<int>(off));
+	}
+	else if (dir == std::ios::end)
+	{
+		if (off > 0 || static_cast<size_t>(-off) > get_put_area_size())
+		{
+			throw std::range_error("put ptr offset out of range");
+		}
+		Base::setp(Base::pbase(), Base::epptr());
+		Base::pbump(m_buffer.capacity() + off);
+	}
+	else if (dir == std::ios::beg)
+	{
+		if (off < 0 || static_cast<size_t>(off) > get_put_area_size())
+		{
+			throw std::range_error("put ptr offset out of range");
+		}
+		Base::setp(Base::pbase(), Base::epptr());
+		Base::pbump(static_cast<int>(off));
+	}
+	return Base::pptr() - Base::pbase();
 }
 
+template <ByteType T>
+constexpr size_t vector_wrap_streambuf<T>::get_put_area_size() const
+{
+	return Base::epptr() - Base::pbase();
+}
+
+template <ByteType T>
+constexpr size_t vector_wrap_streambuf<T>::get_get_area_size() const
+{
+	return Base::egptr() - Base::eback();
+}
+}
 
 #endif//!LUD_MEMORY_STREAM_HEADER

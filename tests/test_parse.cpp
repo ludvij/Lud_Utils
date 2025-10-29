@@ -591,9 +591,9 @@ TEST_CASE( "Is Num integer", "[parse][numbers][integer]") {
 TEST_CASE( "IS Num Real", "[parse][numbers][real]") 
 {
 	SECTION("Simple") {
-		REQUIRE(Lud::is_num<float>("23.23").value() == 23.23f);
-		REQUIRE(Lud::is_num<double>("0.15").value() == 0.15);
-		REQUIRE(Lud::is_num<long double>("-1.23").value() == -1.23);
+		REQUIRE(Lud::is_num<float>("23.23").value() ==23.23f);
+		REQUIRE(Lud::is_num<double>("0.15").value() ==0.15);
+		REQUIRE(Lud::is_num<long double>("-1.23").value() == -1.23L);
 	}
 
 

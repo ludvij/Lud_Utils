@@ -229,9 +229,13 @@ std::optional<N> Lud::is_num(const std::string_view sv, const std::chars_format 
 {
 	auto check = ToUpper(Strip(sv));
 	if (std::to_underlying(fmt) & std::to_underlying(std::chars_format::hex))
+	{
 		inplace::RemovePrefix(check, "0X");
+	}
 	else
+	{
 		inplace::RemovePrefix(check, "+");
+	}
 
 	N val{};
 	const auto first = check.data();

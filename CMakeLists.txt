@@ -42,21 +42,24 @@ if (LUDUTILS_TESTS)
 
 	FetchContent_MakeAvailable(Catch2)
 
-	list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
-	include(CTest)
-	include(Catch)
+
 
 	set(ludutil_test_dir ${CMAKE_CURRENT_LIST_DIR}/tests)
 
 	add_executable(LUDUTILS_TESTS)
 	target_sources(LUDUTILS_TESTS PRIVATE
 		${ludutil_test_dir}/test_parse.cpp
+		${ludutil_test_dir}/test_archive.cpp
 	)
 
 	target_link_libraries(LUDUTILS_TESTS
 		PRIVATE ludutils
 		PRIVATE Catch2::Catch2WithMain
+		PRIVATE zlib
 	)
+	list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
+	include(CTest)
+	include(Catch)
 	catch_discover_tests(LUDUTILS_TESTS)
 
 endif()

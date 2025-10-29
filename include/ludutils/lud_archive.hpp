@@ -18,6 +18,7 @@
 #include <iostream>
 #include <streambuf>
 #include <vector>
+#include <assert.h>
 
 #include "zlib/zlib.h"
 
@@ -38,6 +39,12 @@ std::vector<FileInZipData> CreateZipDirectory(std::istream& stream);
 [[nodiscard]]
 std::vector<uint8_t> UncompressDeflateStream(const FileInZipData& zipped_file, std::istream& stream);
 
+[[nodiscard]]
+std::vector<uint8_t> Compress(const std::span<uint8_t> view);
+
+[[nodiscard]]
+std::vector<uint8_t> Uncompress(const std::span<uint8_t> view);
+
 
 }
 
@@ -49,7 +56,7 @@ std::vector<uint8_t> UncompressDeflateStream(const FileInZipData& zipped_file, s
 
 
 #define LUD_UNZIP_READ_BINARY_PTR(stream, ptr, sz) stream.read(std::bit_cast<char*>(ptr), sz)
-#define LUD_UNZIP_READ_BINARY(stream, var) LUD_READ_BINARY_PTR(stream, &var, sizeof var)
+#define LUD_UNZIP_READ_BINARY(stream, var) LUD_UNZIP_READ_BINARY_PTR(stream, &var, sizeof var)
 
 
 namespace Lud
@@ -101,12 +108,12 @@ struct LocalFileHeader
 
 		
 		char* buf = new char[file_name_length];
-		LUD_READ_BINARY_PTR(stream, buf, file_name_length);
+		LUD_UNZIP_READ_BINARY_PTR(stream, buf, file_name_length);
 		file_name = std::string(buf, file_name_length);
 		delete[] buf;
 		
 		extra_field = new uint8_t[extra_field_length];
-		LUD_READ_BINARY_PTR(stream, extra_field, extra_field_length);
+		LUD_UNZIP_READ_BINARY_PTR(stream, extra_field, extra_field_length);
 	}
 
 	~LocalFileHeader()
@@ -166,12 +173,12 @@ struct CentralDirectoryHeader
 		const auto sz = std::max({ file_name_length, file_comment_length });
 		char* buf = new char[sz];
 
-		LUD_READ_BINARY_PTR(stream, buf, file_name_length);
+		LUD_UNZIP_READ_BINARY_PTR(stream, buf, file_name_length);
 		file_name = std::string(buf, file_name_length);
 
-		LUD_READ_BINARY_PTR(stream, extra_field.get(), extra_field_length);
+		LUD_UNZIP_READ_BINARY_PTR(stream, extra_field.get(), extra_field_length);
 
-		LUD_READ_BINARY_PTR(stream, buf, file_comment_length);
+		LUD_UNZIP_READ_BINARY_PTR(stream, buf, file_comment_length);
 		file_comment = std::string(buf, file_comment_length);
 
 		delete[] buf;
@@ -208,7 +215,7 @@ struct EndOfCentralDirectoryRecord
 
 		char* buf = new char[comment_length];
 
-		LUD_READ_BINARY_PTR(stream, buf, comment_length);
+		LUD_UNZIP_READ_BINARY_PTR(stream, buf, comment_length);
 		comment = std::string(buf, comment_length);
 
 		delete[] buf;
@@ -263,12 +270,12 @@ size_t find_eocd_size(std::istream& stream)
 	{
 		stream.seekg(i);
 		int signature;
-		LUD_READ_BINARY(stream, signature);
+		LUD_UNZIP_READ_BINARY(stream, signature);
 		if (signature == EndOfCentralDirectoryRecord::SIGNATURE)
 		{
 			stream.seekg(i + EndOfCentralDirectoryRecord::OFFSET_OFFSET);
 			uint32_t offset;
-			LUD_READ_BINARY(stream, offset);
+			LUD_UNZIP_READ_BINARY(stream, offset);
 			stream.seekg(offset);
 			uint32_t dir_sig;
 			LUD_UNZIP_READ_BINARY(stream, dir_sig);
@@ -278,7 +285,7 @@ size_t find_eocd_size(std::istream& stream)
 			}
 			stream.seekg(i + EndOfCentralDirectoryRecord::COMMENT_L_OFFSET);
 			uint16_t comment_sz;
-			LUD_READ_BINARY(stream, comment_sz);
+			LUD_UNZIP_READ_BINARY(stream, comment_sz);
 			// eocd not at the end of file
 			if (i + eocd_size + comment_sz != file_size)
 			{
@@ -377,7 +384,7 @@ inline std::vector<uint8_t> UncompressDeflateStream(const FileInZipData& zipped_
 	{
 		int err = Z_OK;
 		uint8_t* in_buffer = new uint8_t[lfh.compressed_size];
-		LUD_READ_BINARY_PTR(stream, in_buffer, lfh.compressed_size);
+		LUD_UNZIP_READ_BINARY_PTR(stream, in_buffer, lfh.compressed_size);
 		err = _detail_archive_::uncompress_oneshot(in_buffer, lfh.compressed_size, out_buffer.data(), lfh.uncompressed_size);
 		delete[] in_buffer;
 		
@@ -393,7 +400,7 @@ inline std::vector<uint8_t> UncompressDeflateStream(const FileInZipData& zipped_
 	}
 	else if (lfh.compression_method == _detail_archive_::LocalFileHeader::COMPRESSION_NONE)
 	{
-		LUD_READ_BINARY_PTR(stream, out_buffer.data(), lfh.uncompressed_size);
+		LUD_UNZIP_READ_BINARY_PTR(stream, out_buffer.data(), lfh.uncompressed_size);
 	}
 
 	
@@ -404,6 +411,116 @@ inline std::vector<uint8_t> UncompressDeflateStream(const FileInZipData& zipped_
 	return out_buffer;
 }
 
+
+inline std::vector<uint8_t> Compress(const std::span<uint8_t> view)
+{
+	int err;
+	z_stream strm;
+
+	int flush;
+
+	strm.zalloc = Z_NULL;
+	strm.zfree  = Z_NULL;
+	strm.opaque = Z_NULL;
+
+	size_t current_chunks = 0;
+
+	std::vector<uint8_t> deflated_stream;
+
+	constexpr size_t CHUNK = 16384;
+	uint8_t out[CHUNK];
+
+	err = deflateInit(&strm, Z_DEFAULT_COMPRESSION);
+	if (err != Z_OK)
+	{
+		throw std::runtime_error(std::format("ZLIB ERROR: {}", zError(err)));
+	}
+	// compress unitl in buffer is exhausted
+	do {
+		// flush stuff
+		strm.avail_in = CHUNK * (current_chunks + 1) > view.size() ? view.size() - CHUNK * current_chunks : CHUNK;
+		strm.next_in = view.data() + CHUNK * current_chunks;
+		current_chunks++;
+		flush = strm.avail_in == CHUNK ? Z_NO_FLUSH : Z_FINISH;
+		do {
+			strm.avail_out = CHUNK;
+			strm.next_out = out;
+			err = deflate(&strm, flush);
+			if (err < Z_OK)
+			{
+				deflateEnd(&strm);
+				throw std::runtime_error(std::format("ZLIB ERROR: {}", zError(err)));
+			}
+			const size_t have = CHUNK - strm.avail_out;
+			deflated_stream.insert(deflated_stream.end(), out, out + have);
+		} while(strm.avail_out == 0);
+		assert(strm.avail_in == 0);
+
+	} while(flush != Z_FINISH);
+	deflateEnd(&strm);
+	if (err != Z_STREAM_END)
+	{
+		throw std::runtime_error(std::format("ZLIB ERROR: {}", zError(err)));
+	}
+
+	return deflated_stream;
+}
+
+inline std::vector<uint8_t> Uncompress(const std::span<uint8_t> view)
+{
+	int err;
+	z_stream strm;
+
+
+	strm.zalloc = Z_NULL;
+	strm.zfree  = Z_NULL;
+	strm.opaque = Z_NULL;
+
+	strm.avail_in = view.size();
+	strm.total_in = view.size();
+	strm.next_in  = view.data();
+
+
+	std::vector<uint8_t> inflated_stream;
+
+	constexpr size_t CHUNK = 16384;
+	uint8_t out[CHUNK];
+
+	err = inflateInit(&strm);
+	if (err != Z_OK)
+	{
+		throw std::runtime_error(std::format("ZLIB ERROR: {}", zError(err)));
+	}
+
+	do {
+		strm.avail_out = CHUNK;
+		strm.next_out = out;
+		err = inflate(&strm, Z_NO_FLUSH);
+		
+		switch (err)
+		{
+		case Z_NEED_DICT:
+			err = Z_DATA_ERROR;
+			[[fallthrough]];
+		case Z_DATA_ERROR: 
+			[[fallthrough]];
+		case Z_MEM_ERROR:
+			inflateEnd(&strm);
+			throw std::runtime_error("ZLIB MEMORY ERROR");
+		}
+		const size_t have = CHUNK - strm.avail_out;
+		inflated_stream.insert(inflated_stream.end(), out, out + have);
+
+	} while(err != Z_STREAM_END);
+
+	inflateEnd(&strm);
+	if (err != Z_STREAM_END)
+	{
+		throw std::runtime_error(std::format("ZLIB ERROR: {}", zError(err)));
+	}
+
+	return inflated_stream;
+}
 }
 
 #endif // !LUD_ARCHIVE_HEADER
