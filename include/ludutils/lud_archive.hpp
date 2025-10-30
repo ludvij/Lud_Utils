@@ -249,7 +249,7 @@ struct DataDescriptor
 
 
 
-size_t find_eocd_size(std::istream& stream)
+inline size_t find_eocd_size(std::istream& stream)
 {
 	// find a signature 0x06054b50
 	// advance 16 Bytes to get "offset" to start of central directory (from begginig of file)
@@ -302,7 +302,7 @@ size_t find_eocd_size(std::istream& stream)
 // https://stackoverflow.com/a/18704403
 // https://stackoverflow.com/a/8662398
 // can't use uncomnpress, buwomp
-size_t uncompress_oneshot(uint8_t* src, uint32_t src_len, uint8_t* dst, uint32_t dst_len)
+inline size_t uncompress_oneshot(uint8_t* src, uint32_t src_len, uint8_t* dst, uint32_t dst_len)
 {
 	z_stream strm = {};
 	

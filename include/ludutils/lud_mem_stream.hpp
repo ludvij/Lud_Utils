@@ -8,6 +8,8 @@
 #include <cstdint>
 #include <vector>
 #include <span>
+#include <print>
+
 
 
 namespace Lud
@@ -42,7 +44,12 @@ template<ByteType T = char>
 class view_streambuf : public std::streambuf
 {
 public:
-	using Base = std::streambuf;
+	using Base    = std::streambuf;
+	using IntT    = Base::int_type;
+	using TraitsT = Base::traits_type;
+	using CharT   = Base::char_type;
+	using OffT    = Base::off_type;
+	using PosT    = Base::pos_type;
 
 	view_streambuf(std::span<T> data);
 	view_streambuf() = default;
@@ -50,45 +57,51 @@ public:
 	void Link(std::span<T> data);
 
 protected:
-	virtual pos_type seekoff(off_type off, std::ios_base::seekdir dir, std::ios_base::openmode which = std::ios_base::in) override;
-	virtual pos_type seekpos(pos_type pos, std::ios_base::openmode which = std::ios_base::in) override;
+	virtual PosT seekoff(OffT off, std::ios_base::seekdir dir, std::ios_base::openmode which = std::ios_base::in) override;
+	virtual PosT seekpos(PosT pos, std::ios_base::openmode which = std::ios_base::in) override;
 };
 
 template<ByteType T = char>
 class vector_wrap_streambuf : public std::streambuf
 {
 public:
-	using Base = std::streambuf;
+	using Base    = std::streambuf;
+	using IntT    = Base::int_type;
+	using TraitsT = Base::traits_type;
+	using CharT   = Base::char_type;
+	using OffT    = Base::off_type;
+	using PosT    = Base::pos_type;
 
 	vector_wrap_streambuf(std::vector<T>& buffer, std::ios_base::openmode);
 	~vector_wrap_streambuf();
 	
 protected:
 
-	virtual int_type overflow(int_type ch = traits_type::eof()) override;
+	virtual IntT overflow(IntT ch = TraitsT::eof()) override;
 
-	virtual std::streamsize xsputn(const char_type* s, std::streamsize count) override;
+	virtual std::streamsize xsputn(const CharT* s, std::streamsize count) override;
 
 	virtual int sync() override;
 
-	virtual pos_type seekoff(off_type off, std::ios_base::seekdir dir, std::ios_base::openmode which) override;
-	virtual pos_type seekpos(pos_type pos, std::ios_base::openmode which) override;
+	virtual PosT seekoff(OffT off, std::ios_base::seekdir dir, std::ios_base::openmode which) override;
+	virtual PosT seekpos(PosT pos, std::ios_base::openmode which) override;
 
 private:
 	constexpr void set_pg_area_pointers();
 
 	constexpr void increase_capacity(size_t sz);
 
-	constexpr pos_type seekoff_get_area(off_type off, std::ios_base::seekdir dir, std::ios_base::openmode which);
-	constexpr pos_type seekoff_put_area(off_type off, std::ios_base::seekdir dir, std::ios_base::openmode which);
+	constexpr PosT seekoff_get_area(OffT off, std::ios_base::seekdir dir, std::ios_base::openmode which);
+	constexpr PosT seekoff_put_area(OffT off, std::ios_base::seekdir dir, std::ios_base::openmode which);
 
 	constexpr size_t get_put_area_size() const;
 	constexpr size_t get_get_area_size() const;
 
 private:
-	bool m_append = false;
 	size_t m_original_size = 0;
 	std::vector<T>& m_buffer;
+	std::ios_base::openmode m_openmode;
+
 };
 
 template<ByteType T = char>
@@ -117,7 +130,7 @@ view_streambuf<T>::view_streambuf(std::span<T> data)
 }
 
 template<ByteType T>
-view_streambuf<T>::pos_type view_streambuf<T>::seekoff(off_type off, std::ios_base::seekdir dir, std::ios_base::openmode which)
+view_streambuf<T>::PosT view_streambuf<T>::seekoff(OffT off, std::ios_base::seekdir dir, std::ios_base::openmode which)
 {
 	if (which & std::ios_base::out)
 	{
@@ -142,7 +155,7 @@ view_streambuf<T>::pos_type view_streambuf<T>::seekoff(off_type off, std::ios_ba
 
 
 template<ByteType T>
-view_streambuf<T>::pos_type view_streambuf<T>::seekpos(pos_type pos, std::ios_base::openmode which)
+view_streambuf<T>::PosT view_streambuf<T>::seekpos(PosT pos, std::ios_base::openmode which)
 {
 	return seekoff(pos, std::ios::beg, which);
 }
@@ -179,27 +192,42 @@ void memory_istream<T>::Link(std::span<T> data)
 template <ByteType T>
 vector_wrap_streambuf<T>::vector_wrap_streambuf(std::vector<T> &buffer, std::ios_base::openmode mode)
 	: m_buffer(buffer)
+	, m_openmode(mode)
 {
-	if ((mode & std::ios::trunc) && !m_buffer.empty())
-	{
-		m_buffer.clear();
-		m_buffer.shrink_to_fit();
-	}
-	
 	char* cs = std::bit_cast<char*>(m_buffer.data());
-	
-	if (mode & std::ios::app) 
+
+	if (mode & std::ios::out)
 	{
-		m_append = true;
-		m_original_size = m_buffer.size();
-		Base::setp(cs + m_original_size, cs + m_original_size + m_buffer.capacity());
+		if (mode & std::ios::trunc)
+		{
+			m_buffer.clear();
+		}
+		else if (mode & std::ios::app) 
+		{
+			m_original_size = m_buffer.size();
+			Base::setp(cs + m_original_size, cs + m_original_size);
+		}
+		else
+		{
+			Base::setp(cs, cs + m_buffer.size());
+		}
+		if (mode & std::ios::ate)
+		{
+			seekoff(0, std::ios::end, std::ios::out);
+		}
 	}
-	if (mode & std::ios::ate)
+	if (mode & std::ios::in)
 	{
-		Base::setp(cs, cs + m_buffer.capacity());
-		Base::pbump(m_buffer.size());
+		Base::setg(cs, cs, cs + m_buffer.size());
+
+		if (mode & std::ios::ate)
+		{
+			seekoff(0, std::ios::end, std::ios::in);
+		}
+			
 	}
-	Base::setg(cs, cs, Base::pptr());
+
+
 }
 
 template <Lud::ByteType T>
@@ -218,21 +246,28 @@ constexpr void vector_wrap_streambuf<T>::set_pg_area_pointers()
 
 	// can't use m_buffer::size in case of append mode since append mode should not allow repositioning 
 	// pointers before original eof
-	const ptrdiff_t p_dist = Base::pptr() - Base::pbase();
-	const ptrdiff_t g_dist = Base::gptr() - Base::eback();
-
-	if (m_append)
+	if (m_openmode & std::ios::out)
 	{
-		Base::setp(cs + m_original_size, cs + m_original_size + m_buffer.capacity());
+		const ptrdiff_t p_dist = Base::pptr() - Base::pbase();
+		if (m_openmode & std::ios::app)
+		{
+			const size_t avail_size = m_buffer.size() - m_original_size;
+			Base::setp(cs + m_original_size, cs + avail_size);
+		}
+		else
+		{
+			Base::setp(cs, cs + m_buffer.size());
+		}
+
+		Base::pbump(p_dist);
 	}
-	else
+	if (m_openmode & std::ios::in)
 	{
-		Base::setp(cs, cs + m_buffer.capacity());
+		const ptrdiff_t g_dist = Base::gptr() - Base::eback();
+
+		Base::setg(cs, cs + g_dist, cs + m_buffer.size());
 	}
-
-	Base::pbump(p_dist);
-
-	Base::setg(cs, cs + g_dist, Base::pptr());
+	
 }
 
 template<ByteType T>
@@ -249,14 +284,14 @@ constexpr void vector_wrap_streambuf<T>::increase_capacity(size_t sz)
 			static_cast<size_t>(m_buffer.size() * 1.5)
 		);
 		m_buffer.reserve(next_size);
-		set_pg_area_pointers();
 	}
 	m_buffer.resize(m_buffer.size() + sz);
+	set_pg_area_pointers();
 
 }
 
 template<ByteType T>
-std::streamsize vector_wrap_streambuf<T>::xsputn(const char_type* s, std::streamsize count)
+std::streamsize vector_wrap_streambuf<T>::xsputn(const CharT* s, std::streamsize count)
 {
 	try 
 	{
@@ -276,27 +311,32 @@ std::streamsize vector_wrap_streambuf<T>::xsputn(const char_type* s, std::stream
 
 // https://gist.github.com/stephanlachnit/272e5eb82c0e2a1cccd55af5d6b73e2b
 template<ByteType T>
-vector_wrap_streambuf<T>::int_type vector_wrap_streambuf<T>::overflow(int_type ch)
+vector_wrap_streambuf<T>::IntT vector_wrap_streambuf<T>::overflow(IntT ch)
 {
 	try 
 	{
-		increase_capacity(sizeof(char_type));
+		increase_capacity(sizeof(CharT));
 	}
 	catch (const std::bad_alloc& e)
 	{
-		return traits_type::eof();
+		return TraitsT::eof();
 	}
 
-	if (!traits_type::eq_int_type(ch, traits_type::eof()))
+	if (!TraitsT::eq_int_type(ch, TraitsT::eof()))
 	{
-		// char_type ch_char = traits_type::to_char_type(ch);
-		// traits_type::copy(pptr(), &ch_char, 1);
+		// CharT ch_char = TraitsT::to_CharT(ch);
+		// TraitsT::copy(pptr(), &ch_char, 1);
 		// https://eel.is/c++draft/streambuf.virtuals#streambuf.virt.put-4.3
 		// setp(pptr(), epptr());
-		m_buffer[pptr() - pbase()] = static_cast<T>(ch);
-		pbump(sizeof(char_type));
+		size_t pos = pptr() - pbase();
+		if (m_openmode & std::ios::app)
+		{
+			pos += m_original_size;
+		}
+		m_buffer[pos] = static_cast<T>(ch);
+		pbump(sizeof(CharT));
 	}
-	return traits_type::not_eof(ch);
+	return TraitsT::not_eof(ch);
 }
 
 
@@ -312,7 +352,7 @@ int vector_wrap_streambuf<T>::sync()
 
 
 template<ByteType T>
-vector_wrap_streambuf<T>::pos_type vector_wrap_streambuf<T>::seekoff(off_type off, std::ios_base::seekdir dir, std::ios_base::openmode which)
+vector_wrap_streambuf<T>::PosT vector_wrap_streambuf<T>::seekoff(OffT off, std::ios_base::seekdir dir, std::ios_base::openmode which)
 {
 	if (which & std::ios::in)
 	{
@@ -327,7 +367,7 @@ vector_wrap_streambuf<T>::pos_type vector_wrap_streambuf<T>::seekoff(off_type of
 }
 
 template<ByteType T>
-vector_wrap_streambuf<T>::pos_type vector_wrap_streambuf<T>::seekpos(pos_type pos, std::ios_base::openmode which)
+vector_wrap_streambuf<T>::PosT vector_wrap_streambuf<T>::seekpos(PosT pos, std::ios_base::openmode which)
 {
 	return seekoff(pos, std::ios::beg, which);
 }
@@ -335,7 +375,7 @@ vector_wrap_streambuf<T>::pos_type vector_wrap_streambuf<T>::seekpos(pos_type po
 
 
 template <ByteType T>
-constexpr vector_wrap_streambuf<T>::pos_type vector_wrap_streambuf<T>::seekoff_get_area(off_type off, std::ios_base::seekdir dir, std::ios_base::openmode which)
+constexpr vector_wrap_streambuf<T>::PosT vector_wrap_streambuf<T>::seekoff_get_area(OffT off, std::ios_base::seekdir dir, std::ios_base::openmode which)
 {
 	switch (dir)
 	{
@@ -371,7 +411,7 @@ constexpr vector_wrap_streambuf<T>::pos_type vector_wrap_streambuf<T>::seekoff_g
 }
 
 template <ByteType T>
-constexpr vector_wrap_streambuf<T>::pos_type vector_wrap_streambuf<T>::seekoff_put_area(off_type off, std::ios_base::seekdir dir, std::ios_base::openmode which)
+constexpr vector_wrap_streambuf<T>::PosT vector_wrap_streambuf<T>::seekoff_put_area(OffT off, std::ios_base::seekdir dir, std::ios_base::openmode which)
 {
 	if (dir == std::ios_base::cur)
 	{
