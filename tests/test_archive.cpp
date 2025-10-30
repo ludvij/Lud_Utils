@@ -11,7 +11,7 @@ TEST_CASE("Compression from view", "[archive][compression]")
 	{
 		std::vector<uint8_t> test_input = {'t', 'h', 'i', 's', ' ', 'i', 's', ' ', 'a', ' ', 't', 'e', 's', 't'};
 		auto deflated = Lud::Compress(test_input);
-		auto inflated = Lud::Uncompress(deflated);
+		auto inflated = Lud::Decompress(deflated);
 		
 		REQUIRE(inflated == test_input);
 	}
@@ -28,7 +28,7 @@ TEST_CASE("Compression from view", "[archive][compression]")
 		}
 
 		auto deflated = Lud::Compress(junk);
-		auto inflated = Lud::Uncompress(deflated);
+		auto inflated = Lud::Decompress(deflated);
 
 		REQUIRE(junk == inflated);
 	}

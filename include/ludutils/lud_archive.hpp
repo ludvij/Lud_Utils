@@ -43,7 +43,7 @@ std::vector<uint8_t> UncompressDeflateStream(const FileInZipData& zipped_file, s
 std::vector<uint8_t> Compress(const std::span<uint8_t> view);
 
 [[nodiscard]]
-std::vector<uint8_t> Uncompress(const std::span<uint8_t> view);
+std::vector<uint8_t> Decompress(const std::span<uint8_t> view);
 
 
 }
@@ -460,13 +460,13 @@ inline std::vector<uint8_t> Compress(const std::span<uint8_t> view)
 	deflateEnd(&strm);
 	if (err != Z_STREAM_END)
 	{
-		throw std::runtime_error(std::format("ZLIB ERROR: {}", zError(err)));
+		throw std::runtime_error("ZLIB ERROR: Stream could not finish");
 	}
 
 	return deflated_stream;
 }
 
-inline std::vector<uint8_t> Uncompress(const std::span<uint8_t> view)
+inline std::vector<uint8_t> Decompress(const std::span<uint8_t> view)
 {
 	int err;
 	z_stream strm;
@@ -516,7 +516,7 @@ inline std::vector<uint8_t> Uncompress(const std::span<uint8_t> view)
 	inflateEnd(&strm);
 	if (err != Z_STREAM_END)
 	{
-		throw std::runtime_error(std::format("ZLIB ERROR: {}", zError(err)));
+		throw std::runtime_error("ZLIB ERROR: Stream could not finish");
 	}
 
 	return inflated_stream;
