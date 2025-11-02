@@ -166,7 +166,7 @@ view_streambuf<T>::PosT view_streambuf<T>::seekpos(PosT pos, std::ios_base::open
 template <ByteType T>
 void view_streambuf<T>::Link(std::span<T> data)
 {
-	char* cs = reinterpret_cast<char*>(data.data());
+	char* cs = std::bit_cast<char*>(data.data());
 	setg(cs, cs, cs + data.size());
 }
 
