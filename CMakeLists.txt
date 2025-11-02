@@ -39,9 +39,19 @@ if (LUDUTILS_TESTS)
 		GIT_TAG        v3.11.0
 		EXCLUDE_FROM_ALL
 	)
+	
+	
+	SET(ZLIB_USE_STATIC_LIBS ON)
+	SET(ZLIB_BUILD_EXAMPLES OFF)
+	FetchContent_Declare(
+		zlib
+		GIT_REPOSITORY https://github.com/madler/zlib.git
+		GIT_TAG        v1.3.1
+		EXCLUDE_FROM_ALL
+	)
 
 	FetchContent_MakeAvailable(Catch2)
-
+	FetchContent_MakeAvailable(zlib)
 
 
 	set(ludutil_test_dir ${CMAKE_CURRENT_LIST_DIR}/tests)
@@ -55,8 +65,11 @@ if (LUDUTILS_TESTS)
 	target_link_libraries(LUDUTILS_TESTS
 		PRIVATE ludutils
 		PRIVATE Catch2::Catch2WithMain
-		PRIVATE ZLIB::ZLIB
+		PRIVATE zlibstatic
 	)
+
+
+	
 	list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
 	include(CTest)
 	include(Catch)
