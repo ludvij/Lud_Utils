@@ -16,10 +16,10 @@ namespace Lud
 {
 
 	
-#define LUD_READ_BINARY_PTR(stream, ptr, sz) stream.read(std::bit_cast<char*>(ptr), sz)
+#define LUD_READ_BINARY_PTR(stream, ptr, sz) stream.read(reinterpret_cast<char*>(ptr), sz)
 #define LUD_READ_BINARY(stream, var) LUD_READ_BINARY_PTR(stream, &var, sizeof var)
 
-#define LUD_WRITE_BINARY_PTR(stream, ptr, sz) stream.write(std::bit_cast<char*>(ptr), sz)
+#define LUD_WRITE_BINARY_PTR(stream, ptr, sz) stream.write(reinterpret_cast<char*>(ptr), sz)
 #define LUD_WRITE_BINARY(stream, var) LUD_WRITE_BINARY_PTR(stream, &var, sizeof var)
 
 template<typename T>
@@ -166,7 +166,7 @@ view_streambuf<T>::PosT view_streambuf<T>::seekpos(PosT pos, std::ios_base::open
 template <ByteType T>
 void view_streambuf<T>::Link(std::span<T> data)
 {
-	char* cs = std::bit_cast<char*>(data.data());
+	char* cs = reinterpret_cast<char*>(data.data());
 	setg(cs, cs, cs + data.size());
 }
 
@@ -194,7 +194,7 @@ vector_wrap_streambuf<T>::vector_wrap_streambuf(std::vector<T> &buffer, std::ios
 	: m_buffer(buffer)
 	, m_openmode(mode)
 {
-	char* cs = std::bit_cast<char*>(m_buffer.data());
+	char* cs = reinterpret_cast<char*>(m_buffer.data());
 
 	if (mode & std::ios::out)
 	{
@@ -242,7 +242,7 @@ Lud::vector_wrap_streambuf<T>::~vector_wrap_streambuf()
 template<ByteType T>
 constexpr void vector_wrap_streambuf<T>::set_pg_area_pointers()
 {
-	char* cs = std::bit_cast<char*>(m_buffer.data());
+	char* cs = reinterpret_cast<char*>(m_buffer.data());
 
 	// can't use m_buffer::size in case of append mode since append mode should not allow repositioning 
 	// pointers before original eof

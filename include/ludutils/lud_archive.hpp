@@ -20,7 +20,7 @@
 #include <vector>
 #include <assert.h>
 
-#include "zlib/zlib.h"
+#include <zlib.h>
 
 namespace Lud
 {
@@ -55,7 +55,7 @@ std::vector<uint8_t> Decompress(const std::span<uint8_t> view);
 
 
 
-#define LUD_UNZIP_READ_BINARY_PTR(stream, ptr, sz) stream.read(std::bit_cast<char*>(ptr), sz)
+#define LUD_UNZIP_READ_BINARY_PTR(stream, ptr, sz) stream.read(reinterpret_cast<char*>(ptr), sz)
 #define LUD_UNZIP_READ_BINARY(stream, var) LUD_UNZIP_READ_BINARY_PTR(stream, &var, sizeof var)
 
 

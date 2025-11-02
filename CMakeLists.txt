@@ -55,7 +55,7 @@ if (LUDUTILS_TESTS)
 	target_link_libraries(LUDUTILS_TESTS
 		PRIVATE ludutils
 		PRIVATE Catch2::Catch2WithMain
-		PRIVATE zlib
+		PRIVATE ZLIB::ZLIB
 	)
 	list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
 	include(CTest)

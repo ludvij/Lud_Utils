@@ -214,7 +214,7 @@ std::vector<T> Slurper::ReadTo()
 template<typename T>
 void Slurper::ReadTo(std::span<T> data)
 {
-	read(std::bit_cast<char*>( data.data() ), data.size_bytes());
+	read(reinterpret_cast<char*>( data.data() ), data.size_bytes());
 }
 template<typename T>
 std::vector<T> Slurper::SlurpTo(const std::filesystem::path filename, std::ios_base::openmode mode)
