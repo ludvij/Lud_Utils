@@ -8,7 +8,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 option(LUDUTILS_TESTS "Enable tests project" OFF)
 
 set(HEADERS
-	include/ludutils/lud_archive.hpp
 	include/ludutils/lud_id.hpp
 	include/ludutils/lud_parse.hpp
 	include/ludutils/lud_mem_stream.hpp
@@ -28,6 +27,7 @@ target_compile_definitions(${PROJECT_NAME} INTERFACE CMAKE_EXPORT_COMPILE_COMMAN
 target_include_directories(${PROJECT_NAME} 
 	INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
+
 
 
 if (LUDUTILS_TESTS)

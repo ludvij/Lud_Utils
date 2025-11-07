@@ -68,6 +68,7 @@ namespace Lud::check
 {
 
 inline void eq(bool expr, const std::string_view msg = "The expression evaluated to false");
+inline void that(bool expr, const std::string_view msg = "The expression evaluated to false");
 template<class T1, class T2> void eq(T1 n1, T2 n2, const std::string_view msg = "passed arguments are not the same");
 template<class T1, class T2> void ne(T1 n1, T2 n2, const std::string_view msg = "passed arguments are the same");
 template<class T1, class T2> void gt(T1 n1, T2 n2, const std::string_view msg = "n1 is not greater than n2");
@@ -337,6 +338,11 @@ inline void eq(bool expr, const std::string_view msg)
 
 	throw std::logic_error(std::string(msg));
 }
+
+inline void that(bool expr, const std::string_view msg)
+{
+	eq(expr, msg);
+}
 template<class T1, class T2>
 inline void eq(T1 n1, T2 n2, const std::string_view msg)
 {
@@ -392,7 +398,7 @@ inline void range(Min min, T val, Max max, const std::string_view msg)
 {
 	if (min <= val && val < max) return;
 
-	throw std::logic_error(std::string(msg));
+	throw std::out_of_range(std::string(msg));
 }
 
 }

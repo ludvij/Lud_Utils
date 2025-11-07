@@ -9,9 +9,7 @@ Then assert and parser  came as I was doing Advent of Code 2023.
 
 Id came to be as I needed to trace lifetimes in EMOOs renderer.
 
-Archive is still WIP, but I made it to embed zips and decompress them into memory.
-
-Mem_stream is an offshoot from archive, as I wanted to use it without archive.
+Mem_stream contains streams implementation over a span or a vector.
 
 ## Usage
 
