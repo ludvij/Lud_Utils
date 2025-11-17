@@ -11,7 +11,6 @@ set(HEADERS
 	include/ludutils/lud_id.hpp
 	include/ludutils/lud_parse.hpp
 	include/ludutils/lud_mem_stream.hpp
-	include/ludutils/lud_slurper.hpp
 	include/ludutils/lud_assert.hpp
 )
 
