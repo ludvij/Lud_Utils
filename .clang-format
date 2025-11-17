@@ -1,0 +1,69 @@
+IndentWidth: 4
+
+InsertBraces: true
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterCaseLabel: false
+  AfterClass: true
+  AfterControlStatement: Always
+  AfterEnum: true
+  AfterFunction: true
+  AfterNamespace: false
+  AfterStruct: true
+  AfterUnion: true
+  AfterExternBlock: true
+  BeforeElse: true
+  BeforeLambdaBody: false
+  BeforeWhile: true
+  SplitEmptyFunction: true
+  SplitEmptyRecord: true
+
+PointerAlignment: Left
+
+AlignAfterOpenBracket: true
+AlignArrayOfStructures: Left
+
+# AlignConsecutiveAssignments: Consecutive
+
+SpaceBeforeAssignmentOperators: true
+
+SpaceBeforeCaseColon: false
+
+BitFieldColonSpacing: Both
+AlignConsecutiveBitFields: AcrossEmptyLinesAndComments
+
+AllowShortBlocksOnASingleLine: Never
+AllowShortEnumsOnASingleLine: false
+AllowShortIfStatementsOnASingleLine: Never
+
+AllowShortLoopsOnASingleLine: false
+
+AllowShortLambdasOnASingleLine: Inline
+LambdaBodyIndentation: Signature
+
+BinPackArguments: true
+# BinPackParameters: OnePerLine
+
+NamespaceIndentation: None
+CompactNamespaces: false
+# AllowShortNamespacesOnASingleLine: false
+AccessModifierOffset: -4
+EmptyLineAfterAccessModifier: Leave
+EmptyLineBeforeAccessModifier: LogicalBlock
+
+IndentPPDirectives: BeforeHash
+
+InsertNewlineAtEOF: true
+
+QualifierAlignment: Left
+
+ReferenceAlignment: Left
+
+BreakConstructorInitializers: BeforeComma
+
+ColumnLimit: 0
+
+MaxEmptyLinesToKeep: 10
+
+KeepEmptyLines:
+  AtStartOfBlock: true

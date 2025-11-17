@@ -58,13 +58,6 @@ concept wstring_container = requires(wRange rng)
 	requires std::convertible_to<std::ranges::range_value_t<wRange>, std::wstring_view>;
 };
 
-template<IntegerType N> 
-[[deprecated("use Lud::is_num")]]
-N parse_num(std::string_view sv, int base=10);
-
-template<RealType N>    
-[[deprecated("use Lud::is_num")]] 
-N parse_num(std::string_view sv, std::chars_format fmt=std::chars_format::general);
 
 template<IntegerType N> std::optional<N> is_num(const std::string_view sv, int base=10);
 template<RealType N>    std::optional<N> is_num(const std::string_view sv, std::chars_format fmt=std::chars_format::general);
@@ -152,41 +145,6 @@ std::wstring& wReverse(std::wstring& wstr);
 
 // implementation==============================================================================
 
-template<Lud::IntegerType N>
-N Lud::parse_num(const std::string_view sv, int base/*=10*/)
-{
-	auto check = ToUpper(Strip(sv));
-	inplace::RemovePrefix(check, "+");
-	if (base == 16)
-	{
-		inplace::RemovePrefix(check, "0X");
-	}
-	else if (base == 2)
-	{
-		inplace::RemovePrefix(check, "0B");
-	}
-	else if (base == 8)
-	{
-		inplace::RemovePrefix(check, "0O");
-		inplace::RemovePrefix(check, "0");
-	}
-	N val{};
-	std::from_chars(check.data(), check.data() + check.size(), val, base);
-	return val;
-}
-
-template<Lud::RealType N>
-N Lud::parse_num(const std::string_view sv, const std::chars_format fmt/*=std::chars_format::general)*/)
-{
-	auto check = ToUpper(Strip(sv));
-	if (std::to_underlying(fmt) & std::to_underlying(std::chars_format::hex))
-		inplace::RemovePrefix(check, "0X");
-	else
-		inplace::RemovePrefix(check, "+");
-	N val{};
-	std::from_chars(check.data(), check.data() + check.size(), val, fmt);
-	return val;
-}
 
 template<Lud::IntegerType N>
 std::optional<N> Lud::is_num(const std::string_view sv, int base/*=10*/)
@@ -194,18 +152,19 @@ std::optional<N> Lud::is_num(const std::string_view sv, int base/*=10*/)
 	// house keeping since from chars does not recognize leading plus sign and leading whitespace
 	auto check = ToUpper(Strip(sv));
 	inplace::RemovePrefix(check, "+");
-	if (base == 16)
-	{
+	switch (base) {
+	case 16:
 		inplace::RemovePrefix(check, "0X");
-	}
-	else if (base == 2)
-	{
+		break;
+	case 2:
 		inplace::RemovePrefix(check, "0B");
-	}
-	else if (base == 8)
-	{
+		break;
+	case 8:
 		inplace::RemovePrefix(check, "0O");
 		inplace::RemovePrefix(check, "0");
+		break;
+	default: 
+		break;
 	}
 
 	N val{};
@@ -283,8 +242,8 @@ template <Lud::RealType N>
 std::optional<N> Lud::is_percentage(const std::string_view sv)
 {
 	auto check = Lud::Strip(sv);
-	const auto first = check.find_first_of("%");
-	if (!(first != std::string::npos && first == check.find_last_of("%")))
+	const auto first = check.find_first_of('%');
+	if (!(first != std::string::npos && first == check.find_last_of('%')))
 	{
 		return std::nullopt;
 	}
@@ -408,7 +367,7 @@ inline std::vector<std::string> Lud::Split(const std::string_view str, const std
 		inner_str.remove_prefix(next + delim.size());
 		next = inner_str.find(delim);
 	}
-	if (inner_str.size() > 0)
+	if (!inner_str.empty())
 	{
 		parts.emplace_back(inner_str);
 	}
@@ -438,7 +397,7 @@ inline std::vector<std::wstring> Lud::wSplit(const std::wstring_view wstr, const
 		next = inner_str.find(wdelim);
 	}
 
-	if (inner_str.size() > 0)
+	if (!inner_str.empty())
 	{
 		parts.emplace_back(inner_str);
 	}
@@ -629,12 +588,12 @@ inline std::wstring Lud::wStrip(const std::wstring_view wstr)
 
 inline std::string Lud::Reverse(const std::string_view str)
 {
-	return std::string(str.rbegin(), str.rend());
+	return {str.rbegin(), str.rend()};
 }
 
-inline std::wstring Lud::wReverse(const std::wstring_view wstr)
-{
-	return std::wstring(wstr.rbegin(), wstr.rend());
+inline std::wstring Lud::wReverse(const std::wstring_view wstr) {
+	return {wstr.rbegin(), wstr.rend()
+};
 }
 
 inline std::string& Lud::inplace::ToUpper(std::string& str)
@@ -783,15 +742,14 @@ inline std::wstring& Lud::inplace::wStrip(std::wstring& wstr)
 
 inline std::string& Lud::inplace::Reverse(std::string& str)
 {
-	std::reverse(str.begin(), str.end());
+	std::ranges::reverse(str);
 	return str;
 }
 
 inline std::wstring& Lud::inplace::wReverse(std::wstring& wstr)
 {
-	std::reverse(wstr.begin(), wstr.end());
+	std::ranges::reverse(wstr);
 	return wstr;
 }
-
 
 #endif//!LUD_PARSE_HEADER
