@@ -1,5 +1,6 @@
 #ifndef LUD_MEMORY_STREAM_HEADER
 #define LUD_MEMORY_STREAM_HEADER
+#include <istream>
 #define LUD_MEMORY_STREAMING
 
 #include <cstdint>
@@ -8,8 +9,7 @@
 #include <streambuf>
 #include <vector>
 
-namespace Lud
-{
+namespace Lud {
 
 #define LUD_READ_BINARY_PTR(stream, ptr, sz) stream.read(reinterpret_cast<char*>(ptr), sz)
 #define LUD_READ_BINARY(stream, var) LUD_READ_BINARY_PTR(stream, &(var), sizeof(var))
@@ -51,6 +51,23 @@ protected:
     PosT seekoff(OffT off, std::ios_base::seekdir dir, std::ios_base::openmode which) override;
     PosT seekpos(PosT pos, std::ios_base::openmode which) override;
 };
+
+
+template <ByteType T = uint8_t>
+class memory_istream : public std::istream
+{
+public:
+    memory_istream(std::span<T> data);
+
+    memory_istream() = default;
+
+    void Link(std::span<T> data);
+
+private:
+
+    view_streambuf<T> m_buffer;
+};
+
 
 template <ByteType T = uint8_t>
 class vector_wrap_streambuf : public std::streambuf
@@ -94,20 +111,32 @@ private:
     std::ios_base::openmode m_openmode;
 };
 
+
+
 template <ByteType T = uint8_t>
-class memory_istream : public std::istream
+class vector_istream : public std::istream
 {
 public:
-    memory_istream(std::span<T> data);
-
-    memory_istream() = default;
-
-    void Link(std::span<T> data);
+    vector_istream(std::vector<T>& vec);
 
 private:
-
-    view_streambuf<T> m_buffer;
+    vector_wrap_streambuf<T> m_sbuf;
 };
+
+template <ByteType T = uint8_t>
+class vector_ostream : public std::ostream
+{
+public:
+    vector_ostream(std::vector<T>& vec);
+
+private:
+    vector_wrap_streambuf<T> m_sbuf;
+};
+
+
+
+
+
 
 template <ByteType T>
 view_streambuf<T>::view_streambuf(std::span<T> data)
@@ -154,7 +183,8 @@ void view_streambuf<T>::Link(std::span<T> data)
 
 template <ByteType T>
 memory_istream<T>::memory_istream(std::span<T> data)
-    : std::istream(&m_buffer), m_buffer(data)
+    : std::istream(&m_buffer)
+    , m_buffer(data)
 {
     rdbuf(&m_buffer);
 }
@@ -167,7 +197,8 @@ void memory_istream<T>::Link(std::span<T> data)
 
 template <ByteType T>
 vector_wrap_streambuf<T>::vector_wrap_streambuf(std::vector<T>& buffer, std::ios_base::openmode mode)
-    : m_buffer(buffer), m_openmode(mode)
+    : m_buffer(buffer)
+    , m_openmode(mode)
 {
     char* cs = reinterpret_cast<char*>(m_buffer.data());
 
@@ -416,6 +447,23 @@ constexpr size_t vector_wrap_streambuf<T>::get_get_area_size() const
 {
     return Base::egptr() - Base::eback();
 }
+
+template <ByteType T>
+vector_istream<T>::vector_istream(std::vector<T>& vec)
+    : std::istream(&m_sbuf)
+    , m_sbuf(vec, std::ios::in)
+{
+}
+
+template <ByteType T>
+vector_ostream<T>::vector_ostream(std::vector<T>& vec)
+    : std::ostream(&m_sbuf)
+    , m_sbuf(vec, std::ios::out)
+{
+}
+
+
+
 } // namespace Lud
 
 #endif //! LUD_MEMORY_STREAM_HEADER
