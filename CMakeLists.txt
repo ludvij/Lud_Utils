@@ -8,11 +8,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 option(LUDUTILS_TESTS "Enable tests project" OFF)
 
 set(HEADERS
-	include/ludutils/lud_archive.hpp
 	include/ludutils/lud_id.hpp
 	include/ludutils/lud_parse.hpp
 	include/ludutils/lud_mem_stream.hpp
-	include/ludutils/lud_slurper.hpp
 	include/ludutils/lud_assert.hpp
 )
 
@@ -30,6 +28,7 @@ target_include_directories(${PROJECT_NAME}
 )
 
 
+
 if (LUDUTILS_TESTS)
 	include(FetchContent)
 
@@ -39,19 +38,8 @@ if (LUDUTILS_TESTS)
 		GIT_TAG        v3.11.0
 		EXCLUDE_FROM_ALL
 	)
-	
-	
-	SET(ZLIB_USE_STATIC_LIBS ON)
-	SET(ZLIB_BUILD_EXAMPLES OFF)
-	FetchContent_Declare(
-		zlib
-		GIT_REPOSITORY https://github.com/madler/zlib.git
-		GIT_TAG        v1.3.1
-		EXCLUDE_FROM_ALL
-	)
 
 	FetchContent_MakeAvailable(Catch2)
-	FetchContent_MakeAvailable(zlib)
 
 
 	set(ludutil_test_dir ${CMAKE_CURRENT_LIST_DIR}/tests)
@@ -59,13 +47,11 @@ if (LUDUTILS_TESTS)
 	add_executable(LUDUTILS_TESTS)
 	target_sources(LUDUTILS_TESTS PRIVATE
 		${ludutil_test_dir}/test_parse.cpp
-		${ludutil_test_dir}/test_archive.cpp
 	)
 
 	target_link_libraries(LUDUTILS_TESTS
 		PRIVATE ludutils
 		PRIVATE Catch2::Catch2WithMain
-		PRIVATE zlibstatic
 	)
 
 
