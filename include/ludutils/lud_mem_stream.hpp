@@ -1,7 +1,7 @@
 #ifndef LUD_MEMORY_STREAM_HEADER
 #define LUD_MEMORY_STREAM_HEADER
+#include <ios>
 #include <istream>
-#define LUD_MEMORY_STREAMING
 
 #include <cstdint>
 #include <iostream>
@@ -42,32 +42,28 @@ public:
     using OffT = Base::off_type;
     using PosT = Base::pos_type;
 
-    view_streambuf(std::span<T> data);
+    view_streambuf(std::span<const T> data);
     view_streambuf() = default;
-
-    void Link(std::span<T> data);
 
 protected:
     PosT seekoff(OffT off, std::ios_base::seekdir dir, std::ios_base::openmode which) override;
     PosT seekpos(PosT pos, std::ios_base::openmode which) override;
-};
 
+    std::streamsize xsgetn(CharT* s, std::streamsize count) override;
+};
 
 template <ByteType T = uint8_t>
 class memory_istream : public std::istream
 {
 public:
-    memory_istream(std::span<T> data);
+    memory_istream(std::span<const T> data);
 
     memory_istream() = default;
-
-    void Link(std::span<T> data);
 
 private:
 
     view_streambuf<T> m_buffer;
 };
-
 
 template <ByteType T = uint8_t>
 class vector_wrap_streambuf : public std::streambuf
@@ -111,8 +107,6 @@ private:
     std::ios_base::openmode m_openmode;
 };
 
-
-
 template <ByteType T = uint8_t>
 class vector_istream : public std::istream
 {
@@ -133,25 +127,16 @@ private:
     vector_wrap_streambuf<T> m_sbuf;
 };
 
-
-
-
-
-
 template <ByteType T>
-view_streambuf<T>::view_streambuf(std::span<T> data)
+view_streambuf<T>::view_streambuf(std::span<const T> data)
 {
-    Link(data);
+    auto cs = std::bit_cast<char*>(data.data());
+    Base::setg(cs, cs, cs + data.size());
 }
 
 template <ByteType T>
 view_streambuf<T>::PosT view_streambuf<T>::seekoff(OffT off, std::ios_base::seekdir dir, std::ios_base::openmode which)
 {
-    if (which & std::ios_base::out)
-    {
-        throw std::runtime_error("Writing is currently not supported!");
-    }
-
     if (dir == std::ios_base::cur)
     {
         Base::gbump(static_cast<int>(off));
@@ -164,7 +149,6 @@ view_streambuf<T>::PosT view_streambuf<T>::seekoff(OffT off, std::ios_base::seek
     {
         Base::setg(Base::eback(), Base::eback() + off, Base::egptr());
     }
-
     return Base::gptr() - Base::eback();
 }
 
@@ -175,24 +159,25 @@ view_streambuf<T>::PosT view_streambuf<T>::seekpos(PosT pos, std::ios_base::open
 }
 
 template <ByteType T>
-void view_streambuf<T>::Link(std::span<T> data)
+std::streamsize view_streambuf<T>::xsgetn(CharT* s, std::streamsize count)
 {
-	char* cs = std::bit_cast<char*>(data.data());
-	setg(cs, cs, cs + data.size());
+    std::streamsize avail = Base::egptr() - Base::gptr();
+    auto to_copy = avail < count ? avail : count;
+    if (avail == 0)
+    {
+        return 0;
+    }
+    TraitsT::copy(s, Base::gptr(), to_copy);
+    Base::gbump(to_copy);
+
+    return to_copy;
 }
 
 template <ByteType T>
-memory_istream<T>::memory_istream(std::span<T> data)
+memory_istream<T>::memory_istream(std::span<const T> data)
     : std::istream(&m_buffer)
     , m_buffer(data)
 {
-    rdbuf(&m_buffer);
-}
-
-template <ByteType T>
-void memory_istream<T>::Link(std::span<T> data)
-{
-    m_buffer.Link(data);
 }
 
 template <ByteType T>
@@ -461,8 +446,6 @@ vector_ostream<T>::vector_ostream(std::vector<T>& vec)
     , m_sbuf(vec, std::ios::out)
 {
 }
-
-
 
 } // namespace Lud
 
