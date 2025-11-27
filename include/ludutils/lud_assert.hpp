@@ -3,9 +3,7 @@
 
 #include <fcntl.h>
 
-#include <format>
-#include <iostream>
-#include <source_location>
+#include <initializer_list>
 #include <string_view>
 
 // hacky workaround when there are a lot of prints
@@ -22,7 +20,8 @@
         fflush(stdout);                                     \
         dup2(stdout_fd, fileno(stdout));                    \
         close(stdout_fd);                                   \
-    } while (0)
+    }                                                       \
+    while (0)
 #define CAPTURE_COUT(code)                                       \
     do                                                           \
     {                                                            \
@@ -39,16 +38,17 @@
         std::cout.rdbuf(lud_assert_old_cout);                    \
         std::cerr.rdbuf(lud_assert_old_cerr);                    \
         std::cerr.rdbuf(lud_assert_old_clog);                    \
-    } while (0)
+    }                                                            \
+    while (0)
 #define NO_PRINT(code) CAPTURE_COUT(CAPTURE_STDOUT(code))
 
 #define assert_no_print(assert_type, ...) NO_PRINT(Lud::assert::##assert_type(__VA_ARGS__))
 #define check_no_print(check_type, ...) NO_PRINT(Lud::check::##check_type(__VA_ARGS__))
 
 #if !defined(NDEBUG)
+    #include <source_location>
 
-namespace Lud::assert
-{
+namespace Lud::assert {
 
 inline void eq(bool expr, const std::string_view msg = "", const std::source_location loc = std::source_location::current());
 inline void that(bool expr, const std::string_view msg = "", const std::source_location loc = std::source_location::current());
@@ -70,11 +70,13 @@ void range(Min min, T val, Max max, const std::string_view msg = "", const std::
 } // namespace Lud::assert
 #endif
 
-namespace Lud::check
-{
+namespace Lud::check {
 
 inline void eq(bool expr, const std::string_view msg = "The expression evaluated to false");
 inline void that(bool expr, const std::string_view msg = "The expression evaluated to false");
+inline void is_false(bool expr, const std::string_view msg = "The expression evaluated to true");
+template <class T1, class T2>
+void in(T1 n1, std::initializer_list<T2>, const std::string_view msg = "argument is not contained in list");
 template <class T1, class T2>
 void eq(T1 n1, T2 n2, const std::string_view msg = "passed arguments are not the same");
 template <class T1, class T2>
@@ -175,8 +177,7 @@ static void psnip_trap(void)
 
     #define LUD_ASSERT_TRAP() psnip_trap()
 
-namespace Lud::Detail
-{
+namespace Lud::Detail {
 
 template <typename... Args>
 inline void log_fail(const std::source_location loc, std::string_view name, std::string_view msg, Args&&... args)
@@ -187,8 +188,7 @@ inline void log_fail(const std::source_location loc, std::string_view name, std:
 
 } // namespace Lud::Detail
 
-namespace Lud::assert
-{
+namespace Lud::assert {
 inline void that(bool expr, const std::string_view msg, const std::source_location loc)
 {
     if (expr)
@@ -351,8 +351,7 @@ inline void range(Min min, T val, Max max, const std::string_view msg, const std
 #else
     #define assert_trap(assert_type, ...)
 
-namespace Lud::assert
-{
+namespace Lud::assert {
 constexpr inline void that(bool expr, const std::string_view msg = "")
 {
     return;
@@ -399,12 +398,11 @@ constexpr inline void range(Min min, T val, Max max, const std::string_view msg 
 } // namespace Lud::assert
 
 #endif
-namespace Lud::check
-{
+namespace Lud::check {
 
 inline void eq(bool expr, const std::string_view msg)
 {
-    if (expr)
+    if (expr) [[likely]]
     {
         return;
     }
@@ -416,10 +414,27 @@ inline void that(bool expr, const std::string_view msg)
 {
     eq(expr, msg);
 }
+inline void is_false(bool expr, const std::string_view msg)
+{
+    eq(!expr, msg);
+}
+template <class T1, class T2>
+void in(T1 n1, std::initializer_list<T2> list, const std::string_view msg)
+{
+    for (const auto& elem : list)
+    {
+        if (n1 == elem)
+        {
+            return;
+        }
+    }
+    throw std::runtime_error(std::string(msg));
+}
+
 template <class T1, class T2>
 inline void eq(T1 n1, T2 n2, const std::string_view msg)
 {
-    if (n1 == n2)
+    if (n1 == n2) [[likely]]
     {
         return;
     }
@@ -430,7 +445,7 @@ inline void eq(T1 n1, T2 n2, const std::string_view msg)
 template <class T1, class T2>
 inline void ne(T1 n1, T2 n2, const std::string_view msg)
 {
-    if (n1 != n2)
+    if (n1 != n2) [[likely]]
     {
         return;
     }
@@ -441,7 +456,7 @@ inline void ne(T1 n1, T2 n2, const std::string_view msg)
 template <class T1, class T2>
 inline void gt(T1 n1, T2 n2, const std::string_view msg)
 {
-    if (n1 > n2)
+    if (n1 > n2) [[likely]]
     {
         return;
     }
@@ -452,7 +467,7 @@ inline void gt(T1 n1, T2 n2, const std::string_view msg)
 template <class T1, class T2>
 inline void lt(T1 n1, T2 n2, const std::string_view msg)
 {
-    if (n1 < n2)
+    if (n1 < n2) [[likely]]
     {
         return;
     }
@@ -463,7 +478,7 @@ inline void lt(T1 n1, T2 n2, const std::string_view msg)
 template <class T1, class T2>
 inline void geq(T1 n1, T2 n2, const std::string_view msg)
 {
-    if (n1 >= n2)
+    if (n1 >= n2) [[likely]]
     {
         return;
     }
@@ -474,7 +489,7 @@ inline void geq(T1 n1, T2 n2, const std::string_view msg)
 template <class T1, class T2>
 inline void leq(T1 n1, T2 n2, const std::string_view msg)
 {
-    if (n1 <= n2)
+    if (n1 <= n2) [[likely]]
     {
         return;
     }
@@ -485,7 +500,7 @@ inline void leq(T1 n1, T2 n2, const std::string_view msg)
 template <class Min, class T, class Max>
 inline void range(Min min, T val, Max max, const std::string_view msg)
 {
-    if (min <= val && val < max)
+    if (min <= val && val < max) [[likely]]
     {
         return;
     }

@@ -11,12 +11,6 @@
 
 namespace Lud {
 
-#define LUD_READ_BINARY_PTR(stream, ptr, sz) stream.read(reinterpret_cast<char*>(ptr), sz)
-#define LUD_READ_BINARY(stream, var) LUD_READ_BINARY_PTR(stream, &(var), sizeof(var))
-
-#define LUD_WRITE_BINARY_PTR(stream, ptr, sz) stream.write(reinterpret_cast<char*>(ptr), sz)
-#define LUD_WRITE_BINARY(stream, var) LUD_WRITE_BINARY_PTR(stream, &(var), sizeof(var))
-
 template <typename T>
 concept ByteType = requires(T param) {
     requires sizeof param == 1;
@@ -265,7 +259,8 @@ constexpr void vector_wrap_streambuf<T>::increase_capacity(size_t sz)
     {
         std::size_t next_size = std::max(
             m_buffer.size() + sz,
-            static_cast<size_t>(m_buffer.size() * 1.5));
+            static_cast<size_t>(m_buffer.size() * 1.5)
+        );
         m_buffer.reserve(next_size);
     }
     m_buffer.resize(m_buffer.size() + sz);

@@ -1,64 +1,55 @@
 #ifndef LUD_PARSE_HEADER
 #define LUD_PARSE_HEADER
 
-#include <charconv>
-#include <optional>
-#include <string_view>
 #include <algorithm>
+#include <charconv>
 #include <cwctype>
-#include <vector>
+#include <limits>
+#include <optional>
 #include <ranges>
 #include <string>
+#include <string_view>
 #include <utility>
-#include <limits>
+#include <vector>
 
-namespace Lud
-{
-
-
+namespace Lud {
 
 #ifndef LUD_NUMBER_TYPE_DEFINED
-#define LUD_NUMBER_TYPE_DEFINED
-template<typename T>
-concept NumberType = requires( T param )
-{
-	requires std::is_arithmetic_v<T>;
-	requires !std::is_same_v<bool, T>;
-	requires !std::is_pointer_v<T>;
+    #define LUD_NUMBER_TYPE_DEFINED
+template <typename T>
+concept NumberType = requires(T param) {
+    requires std::is_arithmetic_v<T>;
+    requires !std::is_same_v<bool, T>;
+    requires !std::is_pointer_v<T>;
 };
-template<typename T>
-concept IntegerType = requires( T param )
-{
-	requires std::is_integral_v<T>;
-	requires !std::is_pointer_v<T>;
-	requires !std::is_same_v<bool, T>;
+template <typename T>
+concept IntegerType = requires(T param) {
+    requires std::is_integral_v<T>;
+    requires !std::is_pointer_v<T>;
+    requires !std::is_same_v<bool, T>;
 };
 
-template<typename T>
-concept RealType = requires( T param )
-{
-	requires std::is_floating_point_v<T>;
-	requires !std::is_pointer_v<T>;
-	requires !std::is_same_v<bool, T>;
+template <typename T>
+concept RealType = requires(T param) {
+    requires std::is_floating_point_v<T>;
+    requires !std::is_pointer_v<T>;
+    requires !std::is_same_v<bool, T>;
 };
-#endif//LUD_NUMBER_TYPE_DEFINED
+#endif // LUD_NUMBER_TYPE_DEFINED
 
-
-template<typename Range> 
-concept string_container = requires(Range rng)
-{
-	requires std::ranges::range<Range>;
-	requires std::convertible_to<std::ranges::range_value_t<Range>, std::string_view>;
+template <typename Range>
+concept string_container = requires(Range rng) {
+    requires std::ranges::range<Range>;
+    requires std::convertible_to<std::ranges::range_value_t<Range>, std::string_view>;
 };
 
-template<typename wRange> 
-concept wstring_container = requires(wRange rng)
-{
-	requires std::ranges::range<wRange>;
-	requires std::convertible_to<std::ranges::range_value_t<wRange>, std::wstring_view>;
+template <typename wRange>
+concept wstring_container = requires(wRange rng) {
+    requires std::ranges::range<wRange>;
+    requires std::convertible_to<std::ranges::range_value_t<wRange>, std::wstring_view>;
 };
 
-
+// clang-format off
 template<IntegerType N> std::optional<N> is_num(const std::string_view sv, int base=10);
 template<RealType N>    std::optional<N> is_num(const std::string_view sv, std::chars_format fmt=std::chars_format::general);
 
@@ -107,6 +98,12 @@ std::wstring wStrip(const std::wstring_view wstr);
 std:: string  Reverse(const std:: string_view  str);
 std::wstring wReverse(const std::wstring_view wstr);
 
+bool  ContainsAny(const std:: string_view  str, const std:: string_view  pattern);
+bool wContainsAny(const std::wstring_view wstr, const std::wstring_view wpattern);
+
+bool  ContainsAll(const std:: string_view  str, const std:: string_view  pattern);
+bool wContainsAll(const std::wstring_view wstr, const std::wstring_view wpattern);
+
 namespace inplace
 {
 std:: string&  RemovePrefix(std:: string&  str, const std:: string_view  prefix);
@@ -142,614 +139,666 @@ std::wstring& wReverse(std::wstring& wstr);
 
 }
 
-
+// clang-format on
 // implementation==============================================================================
 
-
-template<Lud::IntegerType N>
-std::optional<N> Lud::is_num(const std::string_view sv, int base/*=10*/)
+template <Lud::IntegerType N>
+std::optional<N> Lud::is_num(const std::string_view sv, int base /*=10*/)
 {
-	// house keeping since from chars does not recognize leading plus sign and leading whitespace
-	auto check = ToUpper(Strip(sv));
-	inplace::RemovePrefix(check, "+");
-	switch (base) {
-	case 16:
-		inplace::RemovePrefix(check, "0X");
-		break;
-	case 2:
-		inplace::RemovePrefix(check, "0B");
-		break;
-	case 8:
-		inplace::RemovePrefix(check, "0O");
-		inplace::RemovePrefix(check, "0");
-		break;
-	default: 
-		break;
-	}
+    // house keeping since from chars does not recognize leading plus sign and leading whitespace
+    auto check = ToUpper(Strip(sv));
+    inplace::RemovePrefix(check, "+");
+    switch (base)
+    {
+    case 16:
+        inplace::RemovePrefix(check, "0X");
+        break;
+    case 2:
+        inplace::RemovePrefix(check, "0B");
+        break;
+    case 8:
+        inplace::RemovePrefix(check, "0O");
+        inplace::RemovePrefix(check, "0");
+        break;
+    default:
+        break;
+    }
 
-	N val{};
-	const auto first = check.data();
-	const auto last = first + check.size(); 
-	const auto res = std::from_chars(first, last, val, base);
-	if (res.ec == std::errc::invalid_argument || res.ec == std::errc::result_out_of_range)
-	{
-		return std::nullopt;
-	}
-	if (res.ptr != last)
-	{
-		return std::nullopt;
-	}
-	return val;
+    N val{};
+    const auto first = check.data();
+    const auto last = first + check.size();
+    const auto res = std::from_chars(first, last, val, base);
+    if (res.ec == std::errc::invalid_argument || res.ec == std::errc::result_out_of_range)
+    {
+        return std::nullopt;
+    }
+    if (res.ptr != last)
+    {
+        return std::nullopt;
+    }
+    return val;
 }
 
-
-template<Lud::RealType N>
-std::optional<N> Lud::is_num(const std::string_view sv, const std::chars_format fmt/*=std::chars_format::general)*/)
+template <Lud::RealType N>
+std::optional<N> Lud::is_num(const std::string_view sv, const std::chars_format fmt /*=std::chars_format::general)*/)
 {
-	auto check = ToUpper(Strip(sv));
-	if (std::to_underlying(fmt) & std::to_underlying(std::chars_format::hex))
-	{
-		inplace::RemovePrefix(check, "0X");
-	}
-	else
-	{
-		inplace::RemovePrefix(check, "+");
-	}
+    auto check = ToUpper(Strip(sv));
+    if (std::to_underlying(fmt) & std::to_underlying(std::chars_format::hex))
+    {
+        inplace::RemovePrefix(check, "0X");
+    }
+    else
+    {
+        inplace::RemovePrefix(check, "+");
+    }
 
-	N val{};
-	const auto first = check.data();
-	const auto last = first + check.size(); 
-	const auto res = std::from_chars(first, last, val, fmt);
-	if (res.ec == std::errc::invalid_argument || res.ec == std::errc::result_out_of_range)
-	{
-		return std::nullopt;
-	}
-	if (res.ptr != last)
-	{
-		return std::nullopt;
-	}
-	return val;
+    N val{};
+    const auto first = check.data();
+    const auto last = first + check.size();
+    const auto res = std::from_chars(first, last, val, fmt);
+    if (res.ec == std::errc::invalid_argument || res.ec == std::errc::result_out_of_range)
+    {
+        return std::nullopt;
+    }
+    if (res.ptr != last)
+    {
+        return std::nullopt;
+    }
+    return val;
 }
 
 template <Lud::RealType N>
 std::optional<N> Lud::is_fraction(const std::string_view sv)
 {
-	if (!sv.contains("/"))
-	{
-		return std::nullopt;
-	}
-	auto parts = Lud::Split(sv, "/");
-	if (parts.size() != 2)
-	{
-		return std::nullopt;
-	}
+    if (!sv.contains("/"))
+    {
+        return std::nullopt;
+    }
+    auto parts = Lud::Split(sv, "/");
+    if (parts.size() != 2)
+    {
+        return std::nullopt;
+    }
 
-	auto numerator = Lud::is_num<N>(parts[0]);
-	auto denominator = Lud::is_num<N>(parts[1]);
+    auto numerator = Lud::is_num<N>(parts[0]);
+    auto denominator = Lud::is_num<N>(parts[1]);
 
-	if (!(numerator && denominator))
-	{
-		return std::nullopt;
-	}
-	if (denominator.value() == 0)
-	{
-		return std::numeric_limits<N>::quiet_NaN();
-	}
-	return numerator.value() / denominator.value();
+    if (!(numerator && denominator))
+    {
+        return std::nullopt;
+    }
+    if (denominator.value() == 0)
+    {
+        return std::numeric_limits<N>::quiet_NaN();
+    }
+    return numerator.value() / denominator.value();
 }
 
 template <Lud::RealType N>
 std::optional<N> Lud::is_percentage(const std::string_view sv)
 {
-	auto check = Lud::Strip(sv);
-	const auto first = check.find_first_of('%');
-	if (!(first != std::string::npos && first == check.find_last_of('%')))
-	{
-		return std::nullopt;
-	}
+    auto check = Lud::Strip(sv);
+    const auto first = check.find_first_of('%');
+    if (!(first != std::string::npos && first == check.find_last_of('%')))
+    {
+        return std::nullopt;
+    }
 
-	Lud::inplace::RemoveSuffix(check, "%");
+    Lud::inplace::RemoveSuffix(check, "%");
 
-	auto num = Lud::is_num<N>(check);
-	if (!num)
-	{
-		return std::nullopt;
-	}
-	
-	return num.value() / 100.0f;
+    auto num = Lud::is_num<N>(check);
+    if (!num)
+    {
+        return std::nullopt;
+    }
+
+    return num.value() / 100.0f;
 }
 
-template <Lud::string_container Container> 
+template <Lud::string_container Container>
 std::string Lud::Join(const Container& container, const std::string_view delim)
 {
-	return Join(container.begin(), container.end(), delim);
+    return Join(container.begin(), container.end(), delim);
 }
 
-template <Lud::wstring_container wContainer> 
+template <Lud::wstring_container wContainer>
 std::wstring Lud::wJoin(const wContainer& wcontainer, const std::wstring_view wdelim)
 {
-	return Join(wcontainer.begin(), wcontainer.end(), wdelim);
+    return Join(wcontainer.begin(), wcontainer.end(), wdelim);
 }
 
 template <typename Iterator>
 std::string Lud::Join(Iterator first, Iterator last, const std::string_view delim)
 {
-	std::string res;
-	if (first >= last)
-	{
-		return res;
-	}
-	res.append(static_cast<std::string>(*first));
-	for (auto it = first + 1; it != last; ++it)
-	{
-		res.append(delim);
-		res.append(static_cast<std::string>(*it));
-	}
+    std::string res;
+    if (first >= last)
+    {
+        return res;
+    }
+    res.append(static_cast<std::string>(*first));
+    for (auto it = first + 1; it != last; ++it)
+    {
+        res.append(delim);
+        res.append(static_cast<std::string>(*it));
+    }
 
-	return res;
+    return res;
 }
 
 template <typename wIterator>
 std::wstring Lud::wJoin(wIterator wfirst, wIterator wlast, const std::wstring_view wdelim)
 {
-	std::wstring res;
-	if (wfirst >= wlast)
-	{
-		return res;
-	}
-	res.append(static_cast<std::wstring>(*wfirst));
-	for (auto it = wfirst + 1; it != wlast; ++it)
-	{
-		res.append(wdelim);
-		res.append(static_cast<std::wstring>(*it));
-	}
+    std::wstring res;
+    if (wfirst >= wlast)
+    {
+        return res;
+    }
+    res.append(static_cast<std::wstring>(*wfirst));
+    for (auto it = wfirst + 1; it != wlast; ++it)
+    {
+        res.append(wdelim);
+        res.append(static_cast<std::wstring>(*it));
+    }
 
-	return res;
+    return res;
 }
-
 
 inline std::string Lud::RemovePrefix(const std::string_view str, const std::string_view prefix)
 {
 
-	if (str.starts_with(prefix))
-	{
-		return std::string(str.substr(prefix.size()));
-	}
+    if (str.starts_with(prefix))
+    {
+        return std::string(str.substr(prefix.size()));
+    }
 
-	return std::string(str);
+    return std::string(str);
 }
 
 inline std::string Lud::RemoveSuffix(const std::string_view str, const std::string_view suffix)
 {
-	if (str.ends_with(suffix))
-	{
-		return std::string(str.substr(0, str.size() - suffix.size()));
-	}
+    if (str.ends_with(suffix))
+    {
+        return std::string(str.substr(0, str.size() - suffix.size()));
+    }
 
-	return std::string(str);
+    return std::string(str);
 }
 
 inline std::string& Lud::inplace::RemovePrefix(std::string& str, const std::string_view prefix)
 {
-	if (str.starts_with(prefix))
-	{
-		str.erase(0, prefix.size());
-	}
-	return str;
+    if (str.starts_with(prefix))
+    {
+        str.erase(0, prefix.size());
+    }
+    return str;
 }
 
 inline std::string& Lud::inplace::RemoveSuffix(std::string& str, const std::string_view suffix)
 {
-	if (str.ends_with(suffix))
-	{
-		str.erase(str.size() - suffix.size());
-	}
-	return str;
+    if (str.ends_with(suffix))
+    {
+        str.erase(str.size() - suffix.size());
+    }
+    return str;
 }
 
-inline std::vector<std::string> Lud::Split(const std::string_view str, const std::string_view delim, size_t n/*=0*/)
+inline std::vector<std::string> Lud::Split(const std::string_view str, const std::string_view delim, size_t n /*=0*/)
 {
-	std::vector<std::string> parts;
-	if (delim.empty())
-	{
-		parts.emplace_back(str);
-		return parts;
-	}
-	size_t next = str.find(delim);
-	std::string_view inner_str = str;
-	while (next != std::string_view::npos && (n != parts.size() || n == 0))
-	{
-		// skips empty
-		if (next != 0)
-		{
-			parts.emplace_back(inner_str.substr(0, next));
-		}
-		inner_str.remove_prefix(next + delim.size());
-		next = inner_str.find(delim);
-	}
-	if (!inner_str.empty())
-	{
-		parts.emplace_back(inner_str);
-	}
+    std::vector<std::string> parts;
+    if (delim.empty())
+    {
+        parts.emplace_back(str);
+        return parts;
+    }
+    size_t next = str.find(delim);
+    std::string_view inner_str = str;
+    while (next != std::string_view::npos && (n != parts.size() || n == 0))
+    {
+        // skips empty
+        if (next != 0)
+        {
+            parts.emplace_back(inner_str.substr(0, next));
+        }
+        inner_str.remove_prefix(next + delim.size());
+        next = inner_str.find(delim);
+    }
+    if (!inner_str.empty())
+    {
+        parts.emplace_back(inner_str);
+    }
 
-	return parts;
+    return parts;
 }
 
-inline std::vector<std::wstring> Lud::wSplit(const std::wstring_view wstr, const std::wstring_view wdelim, size_t n/*=0*/)
+inline std::vector<std::wstring> Lud::wSplit(const std::wstring_view wstr, const std::wstring_view wdelim, size_t n /*=0*/)
 {
-	std::vector<std::wstring> parts;
-	if (wdelim.empty())
-	{
-		parts.emplace_back(wstr);
-		return parts;
-	}
-	size_t next = wstr.find(wdelim);
-	std::wstring_view inner_str = wstr;
+    std::vector<std::wstring> parts;
+    if (wdelim.empty())
+    {
+        parts.emplace_back(wstr);
+        return parts;
+    }
+    size_t next = wstr.find(wdelim);
+    std::wstring_view inner_str = wstr;
 
-	while (next != std::wstring_view::npos && (n != parts.size() || n == 0))
-	{
-		// skips empty
-		if (next != 0)
-		{
-			parts.emplace_back(inner_str.substr(0, next));
-		}
-		inner_str.remove_prefix(next + wdelim.size());
-		next = inner_str.find(wdelim);
-	}
+    while (next != std::wstring_view::npos && (n != parts.size() || n == 0))
+    {
+        // skips empty
+        if (next != 0)
+        {
+            parts.emplace_back(inner_str.substr(0, next));
+        }
+        inner_str.remove_prefix(next + wdelim.size());
+        next = inner_str.find(wdelim);
+    }
 
-	if (!inner_str.empty())
-	{
-		parts.emplace_back(inner_str);
-	}
+    if (!inner_str.empty())
+    {
+        parts.emplace_back(inner_str);
+    }
 
-	return parts;
+    return parts;
 }
 
 inline std::wstring Lud::wRemovePrefix(const std::wstring_view wstr, const std::wstring_view wprefix)
 {
 
-	if (wstr.starts_with(wprefix))
-	{
-		return std::wstring(wstr.substr(wprefix.size()));
-	}
+    if (wstr.starts_with(wprefix))
+    {
+        return std::wstring(wstr.substr(wprefix.size()));
+    }
 
-	return std::wstring(wstr);
+    return std::wstring(wstr);
 }
 
 inline std::wstring Lud::wRemoveSuffix(const std::wstring_view wstr, const std::wstring_view wsuffix)
 {
-	if (wstr.ends_with(wsuffix))
-	{
-		return std::wstring(wstr.substr(0, wstr.size() - wsuffix.size()));
-	}
+    if (wstr.ends_with(wsuffix))
+    {
+        return std::wstring(wstr.substr(0, wstr.size() - wsuffix.size()));
+    }
 
-	return std::wstring(wstr);
+    return std::wstring(wstr);
 }
 
 inline std::wstring& Lud::inplace::wRemovePrefix(std::wstring& wstr, const std::wstring_view wprefix)
 {
-	if (wstr.starts_with(wprefix))
-	{
-		wstr.erase(0, wprefix.size());
-	}
-	return wstr;
+    if (wstr.starts_with(wprefix))
+    {
+        wstr.erase(0, wprefix.size());
+    }
+    return wstr;
 }
 
 inline std::wstring& Lud::inplace::wRemoveSuffix(std::wstring& wstr, const std::wstring_view wsuffix)
 {
-	if (wstr.ends_with(wsuffix))
-	{
-		wstr.erase(wstr.size() - wsuffix.size());
-	}
-	return wstr;
+    if (wstr.ends_with(wsuffix))
+    {
+        wstr.erase(wstr.size() - wsuffix.size());
+    }
+    return wstr;
 }
 
 inline std::string Lud::ToUpper(const std::string_view str)
 {
-	std::string res(str);
+    std::string res(str);
 
-	inplace::ToUpper(res);
+    inplace::ToUpper(res);
 
-	return res;
+    return res;
 }
 
 inline std::wstring Lud::wToUpper(const std::wstring_view wstr)
 {
-	std::wstring res(wstr);
+    std::wstring res(wstr);
 
-	inplace::wToUpper(res);
+    inplace::wToUpper(res);
 
-	return res;
+    return res;
 }
 
 inline std::string Lud::ToLower(const std::string_view str)
 {
-	std::string res(str);
+    std::string res(str);
 
-	inplace::ToLower(res);
+    inplace::ToLower(res);
 
-	return res;
+    return res;
 }
 
 inline std::wstring Lud::wToLower(const std::wstring_view wstr)
 {
-	std::wstring res(wstr);
+    std::wstring res(wstr);
 
-	inplace::wToLower(res);
+    inplace::wToLower(res);
 
-	return res;
+    return res;
 }
 
 inline std::string Lud::ToTitle(const std::string_view str)
 {
-	std::string res(str);
+    std::string res(str);
 
-	inplace::ToTitle(res);
+    inplace::ToTitle(res);
 
-	return res;
+    return res;
 }
 
 inline std::wstring Lud::wToTitle(const std::wstring_view wstr)
 {
-	std::wstring res(wstr);
+    std::wstring res(wstr);
 
-	inplace::wToTitle(res);
+    inplace::wToTitle(res);
 
-	return res;
+    return res;
 }
 
 inline std::string Lud::Capitalize(const std::string_view str)
 {
-	std::string res(str);
+    std::string res(str);
 
-	inplace::Capitalize(res);
+    inplace::Capitalize(res);
 
-	return res;
+    return res;
 }
 
 inline std::wstring Lud::wCapitalize(const std::wstring_view wstr)
 {
-	std::wstring res(wstr);
+    std::wstring res(wstr);
 
-	inplace::wCapitalize(res);
+    inplace::wCapitalize(res);
 
-	return res;
+    return res;
 }
 
 inline std::string Lud::LStrip(const std::string_view str)
 {
-	const auto delims = "\t\n\r ";
-	const auto idx = str.find_first_not_of(delims);
+    const auto delims = "\t\n\r ";
+    const auto idx = str.find_first_not_of(delims);
 
-	if (idx == std::string::npos)
-	{
-		return {};
-	}
+    if (idx == std::string::npos)
+    {
+        return {};
+    }
 
-	return std::string(str.substr(idx));
+    return std::string(str.substr(idx));
 }
 
 inline std::wstring Lud::wLStrip(const std::wstring_view wstr)
 {
-	const auto delims = L"\t\n\r ";
-	const auto idx = wstr.find_first_not_of(delims);
+    const auto delims = L"\t\n\r ";
+    const auto idx = wstr.find_first_not_of(delims);
 
-	if (idx == std::wstring::npos)
-	{
-		return {};
-	}
+    if (idx == std::wstring::npos)
+    {
+        return {};
+    }
 
-	return std::wstring(wstr.substr(idx));
+    return std::wstring(wstr.substr(idx));
 }
 
 inline std::string Lud::RStrip(const std::string_view str)
 {
-	const auto delims = "\t\n\r ";
-	const auto idx = str.find_last_not_of(delims);
+    const auto delims = "\t\n\r ";
+    const auto idx = str.find_last_not_of(delims);
 
-	if (idx == std::string::npos)
-	{
-		return {};
-	}
+    if (idx == std::string::npos)
+    {
+        return {};
+    }
 
-	return std::string(str.substr(0, idx+1));
+    return std::string(str.substr(0, idx + 1));
 }
 
 inline std::wstring Lud::wRStrip(const std::wstring_view wstr)
 {
-	const auto delims = L"\t\n\r ";
-	const auto idx = wstr.find_last_not_of(delims);
+    const auto delims = L"\t\n\r ";
+    const auto idx = wstr.find_last_not_of(delims);
 
-	if (idx == std::wstring::npos)
-	{
-		return {};
-	}
+    if (idx == std::wstring::npos)
+    {
+        return {};
+    }
 
-	return std::wstring(wstr.substr(0, idx+1));
+    return std::wstring(wstr.substr(0, idx + 1));
 }
 
 inline std::string Lud::Strip(const std::string_view str)
 {
-	std::string res(str);
+    std::string res(str);
 
-	inplace::Strip(res);
+    inplace::Strip(res);
 
-	return res;
+    return res;
 }
 
 inline std::wstring Lud::wStrip(const std::wstring_view wstr)
 {
-	std::wstring res(wstr);
+    std::wstring res(wstr);
 
-	inplace::wStrip(res);
+    inplace::wStrip(res);
 
-	return res;
+    return res;
 }
 
 inline std::string Lud::Reverse(const std::string_view str)
 {
-	return {str.rbegin(), str.rend()};
+    return {str.rbegin(), str.rend()};
 }
 
-inline std::wstring Lud::wReverse(const std::wstring_view wstr) {
-	return {wstr.rbegin(), wstr.rend()
-};
+inline std::wstring Lud::wReverse(const std::wstring_view wstr)
+{
+    return {wstr.rbegin(), wstr.rend()};
+}
+
+inline bool Lud::ContainsAny(const std::string_view str, const std::string_view pattern)
+{
+    for (const auto& c : str)
+    {
+        if (pattern.contains(c))
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+inline bool Lud::wContainsAny(const std::wstring_view wstr, const std::wstring_view wpattern)
+{
+    for (const auto& c : wstr)
+    {
+        if (wpattern.contains(c))
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+inline bool Lud::ContainsAll(const std::string_view str, const std::string_view pattern)
+{
+    size_t counter = 0;
+    for (const auto& c : str)
+    {
+        if (pattern.contains(c))
+        {
+            counter++;
+        }
+        if (counter >= pattern.size())
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+inline bool Lud::wContainsAll(const std::wstring_view wstr, const std::wstring_view wpattern)
+{
+    size_t counter = 0;
+    for (const auto& c : wstr)
+    {
+        if (wpattern.contains(c))
+        {
+            counter++;
+        }
+        if (counter >= wpattern.size())
+        {
+            return true;
+        }
+    }
+    return false;
 }
 
 inline std::string& Lud::inplace::ToUpper(std::string& str)
 {
-	std::ranges::transform(str, str.begin(), [](char c)
-		{
-			return std::toupper(c);
-		});
+    std::ranges::transform(str, str.begin(), [](char c) {
+        return std::toupper(c);
+    });
 
-	return str;
+    return str;
 }
 
 inline std::wstring& Lud::inplace::wToUpper(std::wstring& wstr)
 {
-	std::ranges::transform(wstr, wstr.begin(), [](wchar_t c)
-		{
-			return std::towupper(c);
-		});
-	return wstr;
+    std::ranges::transform(wstr, wstr.begin(), [](wchar_t c) {
+        return std::towupper(c);
+    });
+    return wstr;
 }
 
 inline std::string& Lud::inplace::ToLower(std::string& str)
 {
-	std::ranges::transform(str, str.begin(), [](char c)
-		{
-			return std::tolower(c);
-		});
-	return str;
+    std::ranges::transform(str, str.begin(), [](char c) {
+        return std::tolower(c);
+    });
+    return str;
 }
 
 inline std::wstring& Lud::inplace::wToLower(std::wstring& wstr)
 {
-	std::ranges::transform(wstr, wstr.begin(), [](wchar_t c)
-		{
-			return std::towlower(c);
-		});
-	return wstr;
+    std::ranges::transform(wstr, wstr.begin(), [](wchar_t c) {
+        return std::towlower(c);
+    });
+    return wstr;
 }
 
 inline std::string& Lud::inplace::Capitalize(std::string& str)
 {
-	if (!str.empty())
-	{
-		str[0] = static_cast<char>( std::toupper(str[0]) );
-	}
-	return str;
+    if (!str.empty())
+    {
+        str[0] = static_cast<char>(std::toupper(str[0]));
+    }
+    return str;
 }
 
 inline std::wstring& Lud::inplace::wCapitalize(std::wstring& wstr)
 {
-	if (!wstr.empty())
-	{
-		wstr[0] = static_cast<wchar_t>( std::towupper(wstr[0]) );
-	}
-	return wstr;
+    if (!wstr.empty())
+    {
+        wstr[0] = static_cast<wchar_t>(std::towupper(wstr[0]));
+    }
+    return wstr;
 }
 inline std::string& Lud::inplace::ToTitle(std::string& str)
 {
-	const auto delim = "\t\n\r ";
-	auto idx = str.find_first_not_of(delim);
-	while (idx != std::string::npos)
-	{
-		str[idx] = static_cast<char>( std::toupper(str[idx]) );
-		idx = str.find_first_of(delim, idx + 1);
-		if (idx != std::string::npos)
-		{
-			idx = str.find_first_not_of(delim, idx + 1);
-		}
-	}
-	return str;
+    const auto delim = "\t\n\r ";
+    auto idx = str.find_first_not_of(delim);
+    while (idx != std::string::npos)
+    {
+        str[idx] = static_cast<char>(std::toupper(str[idx]));
+        idx = str.find_first_of(delim, idx + 1);
+        if (idx != std::string::npos)
+        {
+            idx = str.find_first_not_of(delim, idx + 1);
+        }
+    }
+    return str;
 }
 
 inline std::wstring& Lud::inplace::wToTitle(std::wstring& wstr)
 {
-	const auto delim = L"\t\n\r ";
-	auto idx = wstr.find_first_not_of(delim);
-	while (idx != std::string::npos)
-	{
-		wstr[idx] = static_cast<wchar_t>( std::towupper(wstr[idx]) );
-		idx = wstr.find_first_not_of(delim, idx + 1);
-	}
-	return wstr;
+    const auto delim = L"\t\n\r ";
+    auto idx = wstr.find_first_not_of(delim);
+    while (idx != std::string::npos)
+    {
+        wstr[idx] = static_cast<wchar_t>(std::towupper(wstr[idx]));
+        idx = wstr.find_first_not_of(delim, idx + 1);
+    }
+    return wstr;
 }
 
 inline std::string& Lud::inplace::LStrip(std::string& str)
 {
-	const auto delims = "\t\n\r ";
-	const auto idx = str.find_first_not_of(delims);
+    const auto delims = "\t\n\r ";
+    const auto idx = str.find_first_not_of(delims);
 
-	str.erase(0, idx);
-	return str;
+    str.erase(0, idx);
+    return str;
 }
 
 inline std::wstring& Lud::inplace::wLStrip(std::wstring& wstr)
 {
-	const auto delims = L"\t\n\r ";
-	const auto idx = wstr.find_first_not_of(delims);
+    const auto delims = L"\t\n\r ";
+    const auto idx = wstr.find_first_not_of(delims);
 
-	wstr.erase(0, idx);
-	return wstr;
+    wstr.erase(0, idx);
+    return wstr;
 }
 
 inline std::string& Lud::inplace::RStrip(std::string& str)
 {
-	const auto delims = "\t\n\r ";
-	const auto idx = str.find_last_not_of(delims);
+    const auto delims = "\t\n\r ";
+    const auto idx = str.find_last_not_of(delims);
 
-	str.erase(idx + 1);
+    str.erase(idx + 1);
 
-	return str;
+    return str;
 }
 
 inline std::wstring& Lud::inplace::wRStrip(std::wstring& wstr)
 {
-	const auto delims = L"\t\n\r ";
-	const auto idx = wstr.find_last_not_of(delims);
+    const auto delims = L"\t\n\r ";
+    const auto idx = wstr.find_last_not_of(delims);
 
-	wstr.erase(idx + 1);
+    wstr.erase(idx + 1);
 
-	return wstr;
+    return wstr;
 }
 
 inline std::string& Lud::inplace::Strip(std::string& str)
 {
-	const auto delims = "\t\n\r ";
-	const auto first = str.find_first_not_of(delims);
-	const auto last = str.find_last_not_of(delims);
+    const auto delims = "\t\n\r ";
+    const auto first = str.find_first_not_of(delims);
+    const auto last = str.find_last_not_of(delims);
 
-	str.erase(last+1);
-	str.erase(0, first);
+    str.erase(last + 1);
+    str.erase(0, first);
 
-	return str;
+    return str;
 }
 
 inline std::wstring& Lud::inplace::wStrip(std::wstring& wstr)
 {
-	const auto delims = L"\t\n\r ";
-	const auto first = wstr.find_first_not_of(delims);
-	const auto last = wstr.find_last_not_of(delims);
+    const auto delims = L"\t\n\r ";
+    const auto first = wstr.find_first_not_of(delims);
+    const auto last = wstr.find_last_not_of(delims);
 
-	wstr.erase(last+1);
-	wstr.erase(0, first);
+    wstr.erase(last + 1);
+    wstr.erase(0, first);
 
-	return wstr;
+    return wstr;
 }
 
 inline std::string& Lud::inplace::Reverse(std::string& str)
 {
-	std::ranges::reverse(str);
-	return str;
+    std::ranges::reverse(str);
+    return str;
 }
 
 inline std::wstring& Lud::inplace::wReverse(std::wstring& wstr)
 {
-	std::ranges::reverse(wstr);
-	return wstr;
+    std::ranges::reverse(wstr);
+    return wstr;
 }
 
-#endif//!LUD_PARSE_HEADER
+#endif //! LUD_PARSE_HEADER
