@@ -5,6 +5,9 @@
 
 #include <initializer_list>
 #include <string_view>
+#include <string>
+#include <stdexcept>
+#include <iostream>
 
 // hacky workaround when there are a lot of prints
 
