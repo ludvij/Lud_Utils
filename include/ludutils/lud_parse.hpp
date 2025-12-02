@@ -3,7 +3,7 @@
 
 #include <algorithm>
 #include <charconv>
-#include <cwctype>
+#include <iterator>
 #include <limits>
 #include <optional>
 #include <ranges>
@@ -14,8 +14,6 @@
 
 namespace Lud {
 
-#ifndef LUD_NUMBER_TYPE_DEFINED
-    #define LUD_NUMBER_TYPE_DEFINED
 template <typename T>
 concept NumberType = requires(T param) {
     requires std::is_arithmetic_v<T>;
@@ -35,7 +33,6 @@ concept RealType = requires(T param) {
     requires !std::is_pointer_v<T>;
     requires !std::is_same_v<bool, T>;
 };
-#endif // LUD_NUMBER_TYPE_DEFINED
 
 template <typename Range>
 concept string_container = requires(Range rng) {
@@ -43,103 +40,90 @@ concept string_container = requires(Range rng) {
     requires std::convertible_to<std::ranges::range_value_t<Range>, std::string_view>;
 };
 
-template <typename wRange>
-concept wstring_container = requires(wRange rng) {
-    requires std::ranges::range<wRange>;
-    requires std::convertible_to<std::ranges::range_value_t<wRange>, std::wstring_view>;
-};
+template <IntegerType N>
+std::optional<N> is_num(const std::string_view sv, int base = 10);
+template <RealType N>
+std::optional<N> is_num(const std::string_view sv, std::chars_format fmt = std::chars_format::general);
 
-// clang-format off
-template<IntegerType N> std::optional<N> is_num(const std::string_view sv, int base=10);
-template<RealType N>    std::optional<N> is_num(const std::string_view sv, std::chars_format fmt=std::chars_format::general);
+template <RealType N>
+std::optional<N> is_fraction(const std::string_view sv);
+template <RealType N>
+std::optional<N> is_percentage(const std::string_view sv);
 
-template<RealType N> std::optional<N> is_fraction(const std::string_view sv);
-template<RealType N> std::optional<N> is_percentage(const std::string_view sv);
+template <string_container R = std::vector<std::string>>
+R Split(const std::string_view str, const std::string_view delim, size_t n = 0);
 
+template <string_container R = std::vector<std::string>>
+R Split(const std::string_view str, char delim, size_t n = 0);
 
-// TODO: look how to template this
-std::vector<std:: string>  Split(const std:: string_view  str, const std:: string_view  delim, size_t n = 0);
-std::vector<std::wstring> wSplit(const std::wstring_view wstr, const std::wstring_view wdelim, size_t n = 0);
+template <string_container Container>
+std::string Join(const Container& container, const std::string_view delim);
 
-template< string_container  Container> std:: string  Join(const  Container&  container, const std:: string_view  delim);
-template<wstring_container wContainer> std::wstring wJoin(const wContainer& wcontainer, const std::wstring_view wdelim);
+template <string_container Container>
+std::string Join(const Container& container, char delim);
 
-template<typename  Iterator> std:: string  Join( Iterator  first,  Iterator  last, const std:: string_view  delim);
-template<typename wIterator> std::wstring wJoin(wIterator wfirst, wIterator wlast, const std::wstring_view wdelim);
+template <std::input_iterator T>
+std::string Join(T first, T last, const std::string_view delim);
 
+template <std::input_iterator T>
+std::string Join(T first, T last, char delim);
 
-std:: string  RemovePrefix(const std:: string_view  str, const std:: string_view  prefix);
-std::wstring wRemovePrefix(const std::wstring_view wstr, const std::wstring_view wprefix);
+std::string RemovePrefix(const std::string_view str, const std::string_view prefix);
 
-std:: string  RemoveSuffix(const std:: string_view  str, const std:: string_view  suffix);
-std::wstring wRemoveSuffix(const std::wstring_view wstr, const std::wstring_view wsuffix);
+std::string RemoveSuffix(const std::string_view str, const std::string_view suffix);
 
-std:: string  ToUpper(const std:: string_view  str);
-std::wstring wToUpper(const std::wstring_view wstr);
+std::string ToUpper(const std::string_view str);
 
-std:: string  ToLower(const std:: string_view  str);
-std::wstring wToLower(const std::wstring_view wstr);
+std::string ToLower(const std::string_view str);
 
-std:: string  ToTitle(const std:: string_view  str);
-std::wstring wToTitle(const std::wstring_view wstr);
+std::string ToTitle(const std::string_view str);
 
-std:: string  Capitalize(const std:: string_view  str);
-std::wstring wCapitalize(const std::wstring_view wstr);
+std::string Capitalize(const std::string_view str);
 
-std:: string  LStrip(const std:: string_view  str);
-std::wstring wLStrip(const std::wstring_view wstr);
+std::string LStrip(const std::string_view str);
 
-std:: string  RStrip(const std:: string_view  str);
-std::wstring wRStrip(const std::wstring_view wstr);
+std::string RStrip(const std::string_view str);
 
-std:: string  Strip(const std:: string_view  str);
-std::wstring wStrip(const std::wstring_view wstr);
+std::string Strip(const std::string_view str);
 
-std:: string  Reverse(const std:: string_view  str);
-std::wstring wReverse(const std::wstring_view wstr);
+std::string Reverse(const std::string_view str);
 
-bool  ContainsAny(const std:: string_view  str, const std:: string_view  pattern);
-bool wContainsAny(const std::wstring_view wstr, const std::wstring_view wpattern);
+std::string Replace(const std::string_view str, const std::string_view pattern, const std::string_view replacement);
 
-bool  ContainsAll(const std:: string_view  str, const std:: string_view  pattern);
-bool wContainsAll(const std::wstring_view wstr, const std::wstring_view wpattern);
+std::string Replace(const std::string_view str, char pattern, char replacement);
 
-namespace inplace
-{
-std:: string&  RemovePrefix(std:: string&  str, const std:: string_view  prefix);
-std::wstring& wRemovePrefix(std::wstring& wstr, const std::wstring_view wprefix);
+bool ContainsAny(const std::string_view str, const std::string_view pattern);
 
-std:: string&  RemoveSuffix(std:: string&  str, const std:: string_view  suffix);
-std::wstring& wRemoveSuffix(std::wstring& wstr, const std::wstring_view wsuffix);
+bool ContainsAll(const std::string_view str, const std::string_view pattern);
 
-std:: string&  ToUpper(std:: string&  str);
-std::wstring& wToUpper(std::wstring& wstr);
+namespace inplace {
+std::string& RemovePrefix(std::string& str, const std::string_view prefix);
 
-std:: string&  ToLower(std:: string&  str);
-std::wstring& wToLower(std::wstring& wstr);
+std::string& RemoveSuffix(std::string& str, const std::string_view suffix);
 
-std:: string&  ToTitle(std:: string&  str);
-std::wstring& wToTitle(std::wstring& wstr);
+std::string& ToUpper(std::string& str);
 
-std:: string&  Capitalize(std:: string&  str);
-std::wstring& wCapitalize(std::wstring& wstr);
+std::string& ToLower(std::string& str);
 
-std:: string&  LStrip(std:: string&  str);
-std::wstring& wLStrip(std::wstring& wstr);
+std::string& ToTitle(std::string& str);
 
-std:: string&  RStrip(std:: string&  str);
-std::wstring& wRStrip(std::wstring& wstr);
+std::string& Capitalize(std::string& str);
 
-std:: string&  Strip(std:: string&  str);
-std::wstring& wStrip(std::wstring& wstr);
+std::string& LStrip(std::string& str);
 
-std:: string&  Reverse(std:: string&  str);
-std::wstring& wReverse(std::wstring& wstr);
-}
+std::string& RStrip(std::string& str);
 
-}
+std::string& Strip(std::string& str);
 
-// clang-format on
+std::string& Reverse(std::string& str);
+
+std::string& Replace(std::string& str, const std::string_view pattern, const std::string_view replacement);
+
+std::string& Replace(std::string& str, char pattern, char replacement);
+} // namespace inplace
+
+} // namespace Lud
+
 // implementation==============================================================================
 
 template <Lud::IntegerType N>
@@ -261,14 +245,14 @@ std::string Lud::Join(const Container& container, const std::string_view delim)
     return Join(container.begin(), container.end(), delim);
 }
 
-template <Lud::wstring_container wContainer>
-std::wstring Lud::wJoin(const wContainer& wcontainer, const std::wstring_view wdelim)
+template <Lud::string_container Container>
+std::string Lud::Join(const Container& container, char delim)
 {
-    return Join(wcontainer.begin(), wcontainer.end(), wdelim);
+    return Join(container.begin(), container.end(), delim);
 }
 
-template <typename Iterator>
-std::string Lud::Join(Iterator first, Iterator last, const std::string_view delim)
+template <std::input_iterator T>
+std::string Lud::Join(T first, T last, const std::string_view delim)
 {
     std::string res;
     if (first >= last)
@@ -285,19 +269,19 @@ std::string Lud::Join(Iterator first, Iterator last, const std::string_view deli
     return res;
 }
 
-template <typename wIterator>
-std::wstring Lud::wJoin(wIterator wfirst, wIterator wlast, const std::wstring_view wdelim)
+template <std::input_iterator T>
+std::string Lud::Join(T first, T last, char delim)
 {
-    std::wstring res;
-    if (wfirst >= wlast)
+    std::string res;
+    if (first >= last)
     {
         return res;
     }
-    res.append(static_cast<std::wstring>(*wfirst));
-    for (auto it = wfirst + 1; it != wlast; ++it)
+    res.append(static_cast<std::string>(*first));
+    for (auto it = first + 1; it != last; ++it)
     {
-        res.append(wdelim);
-        res.append(static_cast<std::wstring>(*it));
+        res += delim;
+        res.append(static_cast<std::string>(*it));
     }
 
     return res;
@@ -342,101 +326,56 @@ inline std::string& Lud::inplace::RemoveSuffix(std::string& str, const std::stri
     return str;
 }
 
-inline std::vector<std::string> Lud::Split(const std::string_view str, const std::string_view delim, size_t n /*=0*/)
+template <Lud::string_container R>
+R Lud::Split(const std::string_view str, const std::string_view delim, size_t n)
 {
-    std::vector<std::string> parts;
+    R r;
     if (delim.empty())
     {
-        parts.emplace_back(str);
-        return parts;
+        std::inserter(r, r.end()) = std::string{str};
+        return r;
     }
     size_t next = str.find(delim);
     std::string_view inner_str = str;
-    while (next != std::string_view::npos && (n != parts.size() || n == 0))
+    while (next != std::string_view::npos && (n != std::ranges::size(r) || n == 0))
     {
         // skips empty
         if (next != 0)
         {
-            parts.emplace_back(inner_str.substr(0, next));
+            std::inserter(r, r.end()) = std::string{inner_str.substr(0, next)};
         }
         inner_str.remove_prefix(next + delim.size());
         next = inner_str.find(delim);
     }
     if (!inner_str.empty())
     {
-        parts.emplace_back(inner_str);
+        std::inserter(r, r.end()) = std::string{inner_str};
     }
 
-    return parts;
+    return r;
 }
-
-inline std::vector<std::wstring> Lud::wSplit(const std::wstring_view wstr, const std::wstring_view wdelim, size_t n /*=0*/)
+template <Lud::string_container R>
+R Lud::Split(const std::string_view str, char delim, size_t n)
 {
-    std::vector<std::wstring> parts;
-    if (wdelim.empty())
-    {
-        parts.emplace_back(wstr);
-        return parts;
-    }
-    size_t next = wstr.find(wdelim);
-    std::wstring_view inner_str = wstr;
-
-    while (next != std::wstring_view::npos && (n != parts.size() || n == 0))
+    R r;
+    size_t next = str.find(delim);
+    std::string_view inner_str = str;
+    while (next != std::string_view::npos && (n != std::ranges::size(r) || n == 0))
     {
         // skips empty
         if (next != 0)
         {
-            parts.emplace_back(inner_str.substr(0, next));
+            std::inserter(r, r.end()) = std::string{inner_str.substr(0, next)};
         }
-        inner_str.remove_prefix(next + wdelim.size());
-        next = inner_str.find(wdelim);
+        inner_str.remove_prefix(next + 1);
+        next = inner_str.find(delim);
     }
-
     if (!inner_str.empty())
     {
-        parts.emplace_back(inner_str);
+        std::inserter(r, r.end()) = std::string{inner_str};
     }
 
-    return parts;
-}
-
-inline std::wstring Lud::wRemovePrefix(const std::wstring_view wstr, const std::wstring_view wprefix)
-{
-
-    if (wstr.starts_with(wprefix))
-    {
-        return std::wstring(wstr.substr(wprefix.size()));
-    }
-
-    return std::wstring(wstr);
-}
-
-inline std::wstring Lud::wRemoveSuffix(const std::wstring_view wstr, const std::wstring_view wsuffix)
-{
-    if (wstr.ends_with(wsuffix))
-    {
-        return std::wstring(wstr.substr(0, wstr.size() - wsuffix.size()));
-    }
-
-    return std::wstring(wstr);
-}
-
-inline std::wstring& Lud::inplace::wRemovePrefix(std::wstring& wstr, const std::wstring_view wprefix)
-{
-    if (wstr.starts_with(wprefix))
-    {
-        wstr.erase(0, wprefix.size());
-    }
-    return wstr;
-}
-
-inline std::wstring& Lud::inplace::wRemoveSuffix(std::wstring& wstr, const std::wstring_view wsuffix)
-{
-    if (wstr.ends_with(wsuffix))
-    {
-        wstr.erase(wstr.size() - wsuffix.size());
-    }
-    return wstr;
+    return r;
 }
 
 inline std::string Lud::ToUpper(const std::string_view str)
@@ -444,15 +383,6 @@ inline std::string Lud::ToUpper(const std::string_view str)
     std::string res(str);
 
     inplace::ToUpper(res);
-
-    return res;
-}
-
-inline std::wstring Lud::wToUpper(const std::wstring_view wstr)
-{
-    std::wstring res(wstr);
-
-    inplace::wToUpper(res);
 
     return res;
 }
@@ -466,15 +396,6 @@ inline std::string Lud::ToLower(const std::string_view str)
     return res;
 }
 
-inline std::wstring Lud::wToLower(const std::wstring_view wstr)
-{
-    std::wstring res(wstr);
-
-    inplace::wToLower(res);
-
-    return res;
-}
-
 inline std::string Lud::ToTitle(const std::string_view str)
 {
     std::string res(str);
@@ -484,29 +405,11 @@ inline std::string Lud::ToTitle(const std::string_view str)
     return res;
 }
 
-inline std::wstring Lud::wToTitle(const std::wstring_view wstr)
-{
-    std::wstring res(wstr);
-
-    inplace::wToTitle(res);
-
-    return res;
-}
-
 inline std::string Lud::Capitalize(const std::string_view str)
 {
     std::string res(str);
 
     inplace::Capitalize(res);
-
-    return res;
-}
-
-inline std::wstring Lud::wCapitalize(const std::wstring_view wstr)
-{
-    std::wstring res(wstr);
-
-    inplace::wCapitalize(res);
 
     return res;
 }
@@ -524,19 +427,6 @@ inline std::string Lud::LStrip(const std::string_view str)
     return std::string(str.substr(idx));
 }
 
-inline std::wstring Lud::wLStrip(const std::wstring_view wstr)
-{
-    const auto delims = L"\t\n\r ";
-    const auto idx = wstr.find_first_not_of(delims);
-
-    if (idx == std::wstring::npos)
-    {
-        return {};
-    }
-
-    return std::wstring(wstr.substr(idx));
-}
-
 inline std::string Lud::RStrip(const std::string_view str)
 {
     const auto delims = "\t\n\r ";
@@ -550,19 +440,6 @@ inline std::string Lud::RStrip(const std::string_view str)
     return std::string(str.substr(0, idx + 1));
 }
 
-inline std::wstring Lud::wRStrip(const std::wstring_view wstr)
-{
-    const auto delims = L"\t\n\r ";
-    const auto idx = wstr.find_last_not_of(delims);
-
-    if (idx == std::wstring::npos)
-    {
-        return {};
-    }
-
-    return std::wstring(wstr.substr(0, idx + 1));
-}
-
 inline std::string Lud::Strip(const std::string_view str)
 {
     std::string res(str);
@@ -572,23 +449,21 @@ inline std::string Lud::Strip(const std::string_view str)
     return res;
 }
 
-inline std::wstring Lud::wStrip(const std::wstring_view wstr)
-{
-    std::wstring res(wstr);
-
-    inplace::wStrip(res);
-
-    return res;
-}
-
 inline std::string Lud::Reverse(const std::string_view str)
 {
     return {str.rbegin(), str.rend()};
 }
 
-inline std::wstring Lud::wReverse(const std::wstring_view wstr)
+inline std::string Lud::Replace(const std::string_view str, const std::string_view pattern, const std::string_view replacement)
 {
-    return {wstr.rbegin(), wstr.rend()};
+    std::string res{str};
+    return inplace::Replace(res, pattern, replacement);
+}
+
+inline std::string Lud::Replace(const std::string_view str, char pattern, char replacement)
+{
+    std::string res{str};
+    return inplace::Replace(res, pattern, replacement);
 }
 
 inline bool Lud::ContainsAny(const std::string_view str, const std::string_view pattern)
@@ -596,18 +471,6 @@ inline bool Lud::ContainsAny(const std::string_view str, const std::string_view 
     for (const auto& c : str)
     {
         if (pattern.contains(c))
-        {
-            return true;
-        }
-    }
-    return false;
-}
-
-inline bool Lud::wContainsAny(const std::wstring_view wstr, const std::wstring_view wpattern)
-{
-    for (const auto& c : wstr)
-    {
-        if (wpattern.contains(c))
         {
             return true;
         }
@@ -632,23 +495,6 @@ inline bool Lud::ContainsAll(const std::string_view str, const std::string_view 
     return false;
 }
 
-inline bool Lud::wContainsAll(const std::wstring_view wstr, const std::wstring_view wpattern)
-{
-    size_t counter = 0;
-    for (const auto& c : wstr)
-    {
-        if (wpattern.contains(c))
-        {
-            counter++;
-        }
-        if (counter >= wpattern.size())
-        {
-            return true;
-        }
-    }
-    return false;
-}
-
 inline std::string& Lud::inplace::ToUpper(std::string& str)
 {
     std::ranges::transform(str, str.begin(), [](char c) {
@@ -658,28 +504,12 @@ inline std::string& Lud::inplace::ToUpper(std::string& str)
     return str;
 }
 
-inline std::wstring& Lud::inplace::wToUpper(std::wstring& wstr)
-{
-    std::ranges::transform(wstr, wstr.begin(), [](wchar_t c) {
-        return std::towupper(c);
-    });
-    return wstr;
-}
-
 inline std::string& Lud::inplace::ToLower(std::string& str)
 {
     std::ranges::transform(str, str.begin(), [](char c) {
         return std::tolower(c);
     });
     return str;
-}
-
-inline std::wstring& Lud::inplace::wToLower(std::wstring& wstr)
-{
-    std::ranges::transform(wstr, wstr.begin(), [](wchar_t c) {
-        return std::towlower(c);
-    });
-    return wstr;
 }
 
 inline std::string& Lud::inplace::Capitalize(std::string& str)
@@ -691,14 +521,6 @@ inline std::string& Lud::inplace::Capitalize(std::string& str)
     return str;
 }
 
-inline std::wstring& Lud::inplace::wCapitalize(std::wstring& wstr)
-{
-    if (!wstr.empty())
-    {
-        wstr[0] = static_cast<wchar_t>(std::towupper(wstr[0]));
-    }
-    return wstr;
-}
 inline std::string& Lud::inplace::ToTitle(std::string& str)
 {
     const auto delim = "\t\n\r ";
@@ -715,18 +537,6 @@ inline std::string& Lud::inplace::ToTitle(std::string& str)
     return str;
 }
 
-inline std::wstring& Lud::inplace::wToTitle(std::wstring& wstr)
-{
-    const auto delim = L"\t\n\r ";
-    auto idx = wstr.find_first_not_of(delim);
-    while (idx != std::string::npos)
-    {
-        wstr[idx] = static_cast<wchar_t>(std::towupper(wstr[idx]));
-        idx = wstr.find_first_not_of(delim, idx + 1);
-    }
-    return wstr;
-}
-
 inline std::string& Lud::inplace::LStrip(std::string& str)
 {
     const auto delims = "\t\n\r ";
@@ -734,15 +544,6 @@ inline std::string& Lud::inplace::LStrip(std::string& str)
 
     str.erase(0, idx);
     return str;
-}
-
-inline std::wstring& Lud::inplace::wLStrip(std::wstring& wstr)
-{
-    const auto delims = L"\t\n\r ";
-    const auto idx = wstr.find_first_not_of(delims);
-
-    wstr.erase(0, idx);
-    return wstr;
 }
 
 inline std::string& Lud::inplace::RStrip(std::string& str)
@@ -753,16 +554,6 @@ inline std::string& Lud::inplace::RStrip(std::string& str)
     str.erase(idx + 1);
 
     return str;
-}
-
-inline std::wstring& Lud::inplace::wRStrip(std::wstring& wstr)
-{
-    const auto delims = L"\t\n\r ";
-    const auto idx = wstr.find_last_not_of(delims);
-
-    wstr.erase(idx + 1);
-
-    return wstr;
 }
 
 inline std::string& Lud::inplace::Strip(std::string& str)
@@ -777,28 +568,27 @@ inline std::string& Lud::inplace::Strip(std::string& str)
     return str;
 }
 
-inline std::wstring& Lud::inplace::wStrip(std::wstring& wstr)
-{
-    const auto delims = L"\t\n\r ";
-    const auto first = wstr.find_first_not_of(delims);
-    const auto last = wstr.find_last_not_of(delims);
-
-    wstr.erase(last + 1);
-    wstr.erase(0, first);
-
-    return wstr;
-}
-
 inline std::string& Lud::inplace::Reverse(std::string& str)
 {
     std::ranges::reverse(str);
     return str;
 }
-
-inline std::wstring& Lud::inplace::wReverse(std::wstring& wstr)
+inline std::string& Lud::inplace::Replace(std::string& str, const std::string_view pattern, const std::string_view replacement)
 {
-    std::ranges::reverse(wstr);
-    return wstr;
+    size_t pos = str.find(pattern);
+    while (pos != std::string::npos)
+    {
+        str.replace(pos, pattern.size(), replacement);
+        pos = str.find(pattern);
+    }
+
+    return str;
+}
+inline std::string& Lud::inplace::Replace(std::string& str, char pattern, char replacement)
+{
+    std::ranges::replace(str, pattern, replacement);
+
+    return str;
 }
 
 #endif //! LUD_PARSE_HEADER

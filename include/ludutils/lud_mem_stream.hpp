@@ -105,7 +105,7 @@ template <ByteType T = uint8_t>
 class vector_istream : public std::istream
 {
 public:
-    vector_istream(std::vector<T>& vec);
+    vector_istream(std::vector<T>& vec, std::ios_base::openmode = std::ios::in);
 
 private:
     vector_wrap_streambuf<T> m_sbuf;
@@ -115,7 +115,7 @@ template <ByteType T = uint8_t>
 class vector_ostream : public std::ostream
 {
 public:
-    vector_ostream(std::vector<T>& vec);
+    vector_ostream(std::vector<T>& vec, std::ios_base::openmode = std::ios::out);
 
 private:
     vector_wrap_streambuf<T> m_sbuf;
@@ -429,17 +429,25 @@ constexpr size_t vector_wrap_streambuf<T>::get_get_area_size() const
 }
 
 template <ByteType T>
-vector_istream<T>::vector_istream(std::vector<T>& vec)
+vector_istream<T>::vector_istream(std::vector<T>& vec, std::ios_base::openmode mode)
     : std::istream(&m_sbuf)
-    , m_sbuf(vec, std::ios::in)
+    , m_sbuf(vec, mode | std::ios::in)
 {
+    if (mode & std::ios_base::out)
+    {
+        throw std::runtime_error("invalid openmode");
+    }
 }
 
 template <ByteType T>
-vector_ostream<T>::vector_ostream(std::vector<T>& vec)
+vector_ostream<T>::vector_ostream(std::vector<T>& vec, std::ios_base::openmode mode)
     : std::ostream(&m_sbuf)
-    , m_sbuf(vec, std::ios::out)
+    , m_sbuf(vec, mode | std::ios::out)
 {
+    if (mode & std::ios_base::in)
+    {
+        throw std::runtime_error("invalid openmode");
+    }
 }
 
 } // namespace Lud
