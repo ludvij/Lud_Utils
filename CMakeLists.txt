@@ -12,6 +12,7 @@ set(HEADERS
 	include/ludutils/lud_parse.hpp
 	include/ludutils/lud_mem_stream.hpp
 	include/ludutils/lud_assert.hpp
+	include/ludutils/lud_misc.hpp
 )
 
 

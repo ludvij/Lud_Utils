@@ -16,13 +16,6 @@ concept ByteType = requires(T param) {
     requires sizeof param == 1;
 };
 
-template <typename R, typename C = uint8_t>
-concept BinaryRange = requires {
-    requires ByteType<C>;
-    requires std::ranges::forward_range<R>;
-    requires std::same_as<std::ranges::range_value_t<R>, C>;
-};
-
 // C++ standard does not provide char_traits specification for
 // uint8_t and recommends just casting when using binary data
 template <ByteType T = uint8_t>

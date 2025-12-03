@@ -1,409 +1,299 @@
 #ifndef LUD_ASSERT_HEADER
 #define LUD_ASSERT_HEADER
 
+#include <concepts>
+#include <cstdlib>
 #include <fcntl.h>
 
 #include <initializer_list>
-#include <string_view>
-#include <string>
-#include <stdexcept>
 #include <iostream>
+#include <stdexcept>
+#include <string>
+#include <string_view>
 
-// hacky workaround when there are a lot of prints
-
-#define CAPTURE_STDOUT(code)                                \
-    do                                                      \
-    {                                                       \
-        fflush(stdout);                                     \
-        int stdout_fd = dup(fileno(stdout));                \
-        int redir_fd = open("redirected_stdout", O_WRONLY); \
-        dup2(redir_fd, fileno(stdout));                     \
-        close(redir_fd);                                    \
-        code;                                               \
-        fflush(stdout);                                     \
-        dup2(stdout_fd, fileno(stdout));                    \
-        close(stdout_fd);                                   \
-    }                                                       \
-    while (0)
-#define CAPTURE_COUT(code)                                       \
-    do                                                           \
-    {                                                            \
-        std::streambuf* lud_assert_old_cout = std::cout.rdbuf(); \
-        std::stringstream lud_assert_ss_cout;                    \
-        std::cout.rdbuf(lud_assert_ss_cout.rdbuf());             \
-        std::streambuf* lud_assert_old_cerr = std::cerr.rdbuf(); \
-        std::stringstream lud_assert_ss_cerr;                    \
-        std::cerr.rdbuf(lud_assert_ss_cerr.rdbuf());             \
-        std::streambuf* lud_assert_old_clog = std::clog.rdbuf(); \
-        std::stringstream lud_assert_ss_clog;                    \
-        std::clog.rdbuf(lud_assert_ss_clog.rdbuf());             \
-        code;                                                    \
-        std::cout.rdbuf(lud_assert_old_cout);                    \
-        std::cerr.rdbuf(lud_assert_old_cerr);                    \
-        std::cerr.rdbuf(lud_assert_old_clog);                    \
-    }                                                            \
-    while (0)
-#define NO_PRINT(code) CAPTURE_COUT(CAPTURE_STDOUT(code))
-
-#define assert_no_print(assert_type, ...) NO_PRINT(Lud::assert::##assert_type(__VA_ARGS__))
-#define check_no_print(check_type, ...) NO_PRINT(Lud::check::##check_type(__VA_ARGS__))
-
-#if !defined(NDEBUG)
-    #include <source_location>
+#include <source_location>
 
 namespace Lud::assert {
 
-inline void eq(bool expr, const std::string_view msg = "", const std::source_location loc = std::source_location::current());
-inline void that(bool expr, const std::string_view msg = "", const std::source_location loc = std::source_location::current());
+void that(bool expr, const std::string_view msg = "", const std::source_location loc = std::source_location::current());
+
 template <class T1, class T2>
+    requires std::equality_comparable_with<T1, T2>
 void eq(T1 n1, T2 n2, const std::string_view msg = "", const std::source_location loc = std::source_location::current());
+
 template <class T1, class T2>
+    requires std::equality_comparable_with<T1, T2>
 void ne(T1 n1, T2 n2, const std::string_view msg = "", const std::source_location loc = std::source_location::current());
+
 template <class T1, class T2>
+    requires std::totally_ordered_with<T1, T2>
 void gt(T1 n1, T2 n2, const std::string_view msg = "", const std::source_location loc = std::source_location::current());
+
 template <class T1, class T2>
+    requires std::totally_ordered_with<T1, T2>
 void lt(T1 n1, T2 n2, const std::string_view msg = "", const std::source_location loc = std::source_location::current());
+
 template <class T1, class T2>
+    requires std::totally_ordered_with<T1, T2>
 void geq(T1 n1, T2 n2, const std::string_view msg = "", const std::source_location loc = std::source_location::current());
+
 template <class T1, class T2>
+    requires std::totally_ordered_with<T1, T2>
 void leq(T1 n1, T2 n2, const std::string_view msg = "", const std::source_location loc = std::source_location::current());
+
 template <class Min, class T, class Max>
+    requires std::totally_ordered_with<Min, T> &&
+             std::totally_ordered_with<Max, T>
 void range(Min min, T val, Max max, const std::string_view msg = "", const std::source_location loc = std::source_location::current());
 
 } // namespace Lud::assert
-#endif
 
 namespace Lud::check {
 
-inline void eq(bool expr, const std::string_view msg = "The expression evaluated to false");
 inline void that(bool expr, const std::string_view msg = "The expression evaluated to false");
+
 inline void is_false(bool expr, const std::string_view msg = "The expression evaluated to true");
+
 template <class T1, class T2>
+    requires std::equality_comparable_with<T1, T2>
 void in(T1 n1, std::initializer_list<T2>, const std::string_view msg = "argument is not contained in list");
+
 template <class T1, class T2>
+    requires std::equality_comparable_with<T1, T2>
 void eq(T1 n1, T2 n2, const std::string_view msg = "passed arguments are not the same");
+
 template <class T1, class T2>
+    requires std::equality_comparable_with<T1, T2>
 void ne(T1 n1, T2 n2, const std::string_view msg = "passed arguments are the same");
+
 template <class T1, class T2>
+    requires std::totally_ordered_with<T1, T2>
 void gt(T1 n1, T2 n2, const std::string_view msg = "n1 is not greater than n2");
+
 template <class T1, class T2>
+    requires std::totally_ordered_with<T1, T2>
 void lt(T1 n1, T2 n2, const std::string_view msg = "n1 is not lower than n2");
+
 template <class T1, class T2>
+    requires std::totally_ordered_with<T1, T2>
 void geq(T1 n1, T2 n2, const std::string_view msg = "n1 is lower than n2");
+
 template <class T1, class T2>
+    requires std::totally_ordered_with<T1, T2>
 void leq(T1 n1, T2 n2, const std::string_view msg = "n1 is greater than n2");
+
 template <class Min, class T, class Max>
+    requires std::totally_ordered_with<Min, T> &&
+             std::totally_ordered_with<Max, T>
 void range(Min min, T val, Max max, const std::string_view msg = "val is not in range [min, max)");
 
 } // namespace Lud::check
 
-#ifndef NDEBUG
+// https://github.com/nemequ/portable-snippets/blob/master/debug-trap/debug-trap.h
 
-    // https://github.com/nemequ/portable-snippets/blob/master/debug-trap/debug-trap.h
-
-    #if defined(__has_builtin) && !defined(__ibmxl__)
-        #if __has_builtin(__builtin_debugtrap)
-            #define psnip_trap() __builtin_debugtrap()
-        #elif __has_builtin(__debugbreak)
-            #define psnip_trap() __debugbreak()
-        #endif
+#if defined(__has_builtin) && !defined(__ibmxl__)
+    #if __has_builtin(__builtin_debugtrap)
+        #define PSNIP_TRAP() __builtin_debugtrap()
+    #elif __has_builtin(__debugbreak)
+        #define PSNIP_TRAP() __debugbreak()
     #endif
-    #if !defined(psnip_trap)
-        #if defined(_MSC_VER) || defined(__INTEL_COMPILER)
-            #define psnip_trap() __debugbreak()
-        #elif defined(__ARMCC_VERSION)
-            #define psnip_trap() __breakpoint(42)
-        #elif defined(__ibmxl__) || defined(__xlC__)
-            #include <builtins.h>
-            #define psnip_trap() __trap(42)
-        #elif defined(__DMC__) && defined(_M_IX86)
-static void psnip_trap(void)
+#endif
+#if !defined(PSNIP_TRAP)
+    #if defined(_MSC_VER) || defined(__INTEL_COMPILER)
+        #define PSNIP_TRAP() __debugbreak()
+    #elif defined(__ARMCC_VERSION)
+        #define PSNIP_TRAP() __breakpoint(42)
+    #elif defined(__ibmxl__) || defined(__xlC__)
+        #include <builtins.h>
+        #define PSNIP_TRAP() __trap(42)
+    #elif defined(__DMC__) && defined(_M_IX86)
+void PSNIP_TRAP()
 {
     __asm int 3h;
 }
-        #elif defined(__i386__) || defined(__x86_64__)
-static void psnip_trap(void)
+    #elif defined(__i386__) || defined(__x86_64__)
+void PSNIP_TRAP()
 {
     __asm__ __volatile__("int3");
 }
-        #elif defined(__thumb__)
-static void psnip_trap(void)
+    #elif defined(__thumb__)
+void PSNIP_TRAP()
 {
     __asm__ __volatile__(".inst 0xde01");
 }
-        #elif defined(__aarch64__)
-static void psnip_trap(void)
+    #elif defined(__aarch64__)
+void PSNIP_TRAP()
 {
     __asm__ __volatile__(".inst 0xd4200000");
 }
-        #elif defined(__arm__)
-static void psnip_trap(void)
+    #elif defined(__arm__)
+void PSNIP_TRAP()
 {
     __asm__ __volatile__(".inst 0xe7f001f0");
 }
-        #elif defined(__alpha__) && !defined(__osf__)
-static void psnip_trap(void)
+    #elif defined(__alpha__) && !defined(__osf__)
+void PSNIP_TRAP()
 {
     __asm__ __volatile__("bpt");
 }
-        #elif defined(_54_)
-static void psnip_trap(void)
+    #elif defined(_54_)
+void PSNIP_TRAP()
 {
     __asm__ __volatile__("ESTOP");
 }
-        #elif defined(_55_)
-static void psnip_trap(void)
+    #elif defined(_55_)
+void PSNIP_TRAP()
 {
     __asm__ __volatile__(";\n .if (.MNEMONIC)\n ESTOP_1\n .else\n ESTOP_1()\n .endif\n NOP");
 }
-        #elif defined(_64P_)
-static void psnip_trap(void)
+    #elif defined(_64P_)
+void PSNIP_TRAP()
 {
     __asm__ __volatile__("SWBP 0");
 }
-        #elif defined(_6x_)
-static void psnip_trap(void)
+    #elif defined(_6x_)
+void PSNIP_TRAP()
 {
     __asm__ __volatile__("NOP\n .word 0x10000000");
 }
-        #elif defined(__STDC_HOSTED__) && (__STDC_HOSTED__ == 0) && defined(__GNUC__)
-            #define psnip_trap() __builtin_trap()
+    #elif defined(__STDC_HOSTED__) && (__STDC_HOSTED__ == 0) && defined(__GNUC__)
+        #define PSNIP_TRAP() __builtin_trap()
+    #else
+        #include <signal.h>
+        #if defined(SIGTRAP)
+            #define PSNIP_TRAP() raise(SIGTRAP)
         #else
-            #include <signal.h>
-            #if defined(SIGTRAP)
-                #define psnip_trap() raise(SIGTRAP)
-            #else
-                #define psnip_trap() raise(SIGABRT)
-            #endif
+            #define PSNIP_TRAP() raise(SIGABRT)
         #endif
     #endif
+#endif
 
-    #define LUD_ASSERT_TRAP() psnip_trap()
+#ifdef NDEBUG
+    #define LUD_ASSERT_TRAP(x) Lud::assert::that(x);
+#else
+    #define LUD_ASSERT_TRAP(x) \
+        if (!(x)) [[likely]]   \
+        {                      \
+            PSNIP_TRAP();      \
+        }
+#endif
 
-namespace Lud::Detail {
+namespace Lud::_detail_ {
 
 template <typename... Args>
-inline void log_fail(const std::source_location loc, std::string_view name, std::string_view msg, Args&&... args)
+inline void log_and_die(const std::source_location loc, std::string_view msg, std::string_view fmt, Args&&... args)
 {
-    std::cout << "[ASSERT FAIL] " << loc.file_name() << "(" << loc.line() << ", " << loc.column() << ")\n";
-    std::cout << std::vformat("{: >13s} → ", std::make_format_args(name)) << std::vformat(msg, std::make_format_args(args...)) << '\n';
+    std::println(std::cerr, "[ASSERT FAIL] : {}({}:{})", loc.file_name(), loc.line(), loc.column());
+    std::println(std::cerr, "        [WHY] : {}", std::vformat(fmt, std::make_format_args(args...)));
+    if (!msg.empty())
+    {
+        std::println(std::cerr, "    [MESSAGE] : {}", msg);
+    }
+    std::exit(1);
 }
 
-} // namespace Lud::Detail
+} // namespace Lud::_detail_
 
 namespace Lud::assert {
 inline void that(bool expr, const std::string_view msg, const std::source_location loc)
 {
-    if (expr)
+    if (expr) [[likely]]
     {
         return;
     }
 
-    if (msg.empty())
-    {
-        Detail::log_fail(loc, "ASSERTION", "The expression evaluated to false");
-    }
-    else
-    {
-        Detail::log_fail(loc, "ASSERTION", msg);
-    }
-}
-inline void eq(bool expr, const std::string_view msg, const std::source_location loc)
-{
-    if (expr)
-    {
-        return;
-    }
-
-    if (msg.empty())
-    {
-        Detail::log_fail(loc, "EQUAL", "The expression evaluated to false");
-    }
-    else
-    {
-        Detail::log_fail(loc, "EQUAL", msg);
-    }
+    _detail_::log_and_die(loc, msg, "expression was false");
 }
 
 template <class T1, class T2>
-inline void eq(T1 n1, T2 n2, const std::string_view msg, const std::source_location loc)
+    requires std::equality_comparable_with<T1, T2>
+void eq(T1 n1, T2 n2, const std::string_view msg, const std::source_location loc)
 {
-    if (n1 == n2)
+    if (n1 == n2) [[likely]]
     {
         return;
     }
 
-    if (msg.empty())
-    {
-        Detail::log_fail(loc, "EQUAL", "{} ≠ {}", n1, n2);
-    }
-    else
-    {
-        Detail::log_fail(loc, "EQUAL", msg);
-    }
+    _detail_::log_and_die(loc, msg, "{} ≠ {}", n1, n2);
 }
 
 template <class T1, class T2>
-inline void ne(T1 n1, T2 n2, const std::string_view msg, const std::source_location loc)
+    requires std::equality_comparable_with<T1, T2>
+void ne(T1 n1, T2 n2, const std::string_view msg, const std::source_location loc)
 {
-    if (n1 != n2)
+    if (n1 != n2) [[likely]]
     {
         return;
     }
 
-    if (msg.empty())
-    {
-        Detail::log_fail(loc, "DIFFERENT", "{} = {}", n1, n2);
-    }
-    else
-    {
-        Detail::log_fail(loc, "DIFFERENT", msg);
-    }
+    _detail_::log_and_die(loc, msg, "{} = {}", n1, n2);
 }
 
 template <class T1, class T2>
-inline void gt(T1 n1, T2 n2, const std::string_view msg, const std::source_location loc)
+    requires std::totally_ordered_with<T1, T2>
+void gt(T1 n1, T2 n2, const std::string_view msg, const std::source_location loc)
 {
-    if (n1 > n2)
+    if (n1 > n2) [[likely]]
     {
         return;
     }
 
-    if (msg.empty())
+    _detail_::log_and_die(loc, msg, "{} ≤ {}", n1, n2);
+}
+template <class T1, class T2>
+    requires std::totally_ordered_with<T1, T2>
+void lt(T1 n1, T2 n2, const std::string_view msg, const std::source_location loc)
+{
+    if (n1 < n2) [[likely]]
     {
-        Detail::log_fail(loc, "GREATER THAN", "{} ≤ {}", n1, n2);
+        return;
     }
-    else
-    {
-        Detail::log_fail(loc, "GREATER THAN", msg);
-    }
+
+    _detail_::log_and_die(loc, msg, "{} ≥ {}", n1, n2);
 }
 
 template <class T1, class T2>
-inline void lt(T1 n1, T2 n2, const std::string_view msg, const std::source_location loc)
+    requires std::totally_ordered_with<T1, T2>
+void geq(T1 n1, T2 n2, const std::string_view msg, const std::source_location loc)
 {
-    if (n1 < n2)
+    if (n1 >= n2) [[likely]]
     {
         return;
     }
 
-    if (msg.empty())
-    {
-        Detail::log_fail(loc, "LOWER THAN", "{} ≥ {}", n1, n2);
-    }
-    else
-    {
-        Detail::log_fail(loc, "LOWER THAN", msg);
-    }
+    _detail_::log_and_die(loc, msg, "{} < {}", n1, n2);
 }
 
 template <class T1, class T2>
-inline void geq(T1 n1, T2 n2, const std::string_view msg, const std::source_location loc)
+    requires std::totally_ordered_with<T1, T2>
+void leq(T1 n1, T2 n2, const std::string_view msg, const std::source_location loc)
 {
-    if (n1 >= n2)
+    if (n1 <= n2) [[likely]]
     {
         return;
     }
 
-    if (msg.empty())
-    {
-        Detail::log_fail(loc, "GREATER EQUAL", "{} < {}", n1, n2);
-    }
-    else
-    {
-        Detail::log_fail(loc, "GREATER EQUAL", msg);
-    }
-}
-
-template <class T1, class T2>
-inline void leq(T1 n1, T2 n2, const std::string_view msg, const std::source_location loc)
-{
-    if (n1 <= n2)
-    {
-        return;
-    }
-    if (msg.empty())
-    {
-        Detail::log_fail(loc, "LOWER EQUAL", "{} > {} ", n1, n2);
-    }
-    else
-    {
-        Detail::log_fail(loc, "LOWER EQUAL", msg);
-    }
+    _detail_::log_and_die(loc, msg, "{} > {} ", n1, n2);
 }
 
 template <class Min, class T, class Max>
-inline void range(Min min, T val, Max max, const std::string_view msg, const std::source_location loc)
+    requires std::totally_ordered_with<Min, T> &&
+             std::totally_ordered_with<Max, T>
+void range(Min min, T val, Max max, const std::string_view msg, const std::source_location loc)
 {
-    if (min <= val && val < max)
+    if (min <= val && val < max) [[likely]]
     {
         return;
     }
-    if (msg.empty())
-    {
-        Detail::log_fail(loc, "RANGE", "{} is not in the range [{}, {})", val, min, max);
-    }
-    else
-    {
-        Detail::log_fail(loc, "RANGE", msg);
-    }
+
+    _detail_::log_and_die(loc, msg, "{} is not in the range [{}, {})", val, min, max);
 }
 
 } // namespace Lud::assert
 
-#else
-    #define assert_trap(assert_type, ...)
-
-namespace Lud::assert {
-constexpr inline void that(bool expr, const std::string_view msg = "")
-{
-    return;
-}
-constexpr inline void eq(bool expr, const std::string_view msg = "")
-{
-    return;
-}
-template <class T1, class T2>
-constexpr inline void eq(T1 n1, T2 n2, const std::string_view msg = "")
-{
-    return;
-}
-template <class T1, class T2>
-constexpr inline void ne(T1 n1, T2 n2, const std::string_view msg = "")
-{
-    return;
-}
-template <class T1, class T2>
-constexpr inline void gt(T1 n1, T2 n2, const std::string_view msg = "")
-{
-    return;
-}
-template <class T1, class T2>
-constexpr inline void lt(T1 n1, T2 n2, const std::string_view msg = "")
-{
-    return;
-}
-template <class T1, class T2>
-constexpr inline void geq(T1 n1, T2 n2, const std::string_view msg = "")
-{
-    return;
-}
-template <class T1, class T2>
-constexpr inline void leq(T1 n1, T2 n2, const std::string_view msg = "")
-{
-    return;
-}
-template <class Min, class T, class Max>
-constexpr inline void range(Min min, T val, Max max, const std::string_view msg = "")
-{
-    return;
-}
-} // namespace Lud::assert
-
-#endif
 namespace Lud::check {
 
-inline void eq(bool expr, const std::string_view msg)
+inline void that(bool expr, const std::string_view msg)
 {
     if (expr) [[likely]]
     {
@@ -412,16 +302,12 @@ inline void eq(bool expr, const std::string_view msg)
 
     throw std::runtime_error(std::string(msg));
 }
-
-inline void that(bool expr, const std::string_view msg)
-{
-    eq(expr, msg);
-}
 inline void is_false(bool expr, const std::string_view msg)
 {
-    eq(!expr, msg);
+    that(!expr, msg);
 }
 template <class T1, class T2>
+    requires std::equality_comparable_with<T1, T2>
 void in(T1 n1, std::initializer_list<T2> list, const std::string_view msg)
 {
     for (const auto& elem : list)
@@ -435,17 +321,19 @@ void in(T1 n1, std::initializer_list<T2> list, const std::string_view msg)
 }
 
 template <class T1, class T2>
+    requires std::equality_comparable_with<T1, T2>
 inline void eq(T1 n1, T2 n2, const std::string_view msg)
 {
-    if (n1 == n2) [[likely]]
+    if (n1 == n2)
     {
         return;
     }
 
-    throw std::runtime_error(std::string(msg));
+    throw std::runtime_error(std::format("{}: [{} != {}]", msg, n1, n2));
 }
 
 template <class T1, class T2>
+    requires std::equality_comparable_with<T1, T2>
 inline void ne(T1 n1, T2 n2, const std::string_view msg)
 {
     if (n1 != n2) [[likely]]
@@ -453,10 +341,11 @@ inline void ne(T1 n1, T2 n2, const std::string_view msg)
         return;
     }
 
-    throw std::runtime_error(std::string(msg));
+    throw std::runtime_error(std::format("{}: [{} == {}]", msg, n1, n2));
 }
 
 template <class T1, class T2>
+    requires std::totally_ordered_with<T1, T2>
 inline void gt(T1 n1, T2 n2, const std::string_view msg)
 {
     if (n1 > n2) [[likely]]
@@ -464,10 +353,11 @@ inline void gt(T1 n1, T2 n2, const std::string_view msg)
         return;
     }
 
-    throw std::runtime_error(std::string(msg));
+    throw std::runtime_error(std::format("{}: [{} <= {}]", msg, n1, n2));
 }
 
 template <class T1, class T2>
+    requires std::totally_ordered_with<T1, T2>
 inline void lt(T1 n1, T2 n2, const std::string_view msg)
 {
     if (n1 < n2) [[likely]]
@@ -475,10 +365,11 @@ inline void lt(T1 n1, T2 n2, const std::string_view msg)
         return;
     }
 
-    throw std::runtime_error(std::string(msg));
+    throw std::runtime_error(std::format("{}: [{} >= {}]", msg, n1, n2));
 }
 
 template <class T1, class T2>
+    requires std::totally_ordered_with<T1, T2>
 inline void geq(T1 n1, T2 n2, const std::string_view msg)
 {
     if (n1 >= n2) [[likely]]
@@ -486,10 +377,11 @@ inline void geq(T1 n1, T2 n2, const std::string_view msg)
         return;
     }
 
-    throw std::runtime_error(std::string(msg));
+    throw std::runtime_error(std::format("{}: [{} < {}]", msg, n1, n2));
 }
 
 template <class T1, class T2>
+    requires std::totally_ordered_with<T1, T2>
 inline void leq(T1 n1, T2 n2, const std::string_view msg)
 {
     if (n1 <= n2) [[likely]]
@@ -497,10 +389,12 @@ inline void leq(T1 n1, T2 n2, const std::string_view msg)
         return;
     }
 
-    throw std::runtime_error(std::string(msg));
+    throw std::runtime_error(std::format("{}: [{} > {}]", msg, n1, n2));
 }
 
 template <class Min, class T, class Max>
+    requires std::totally_ordered_with<Min, T> &&
+             std::totally_ordered_with<Max, T>
 inline void range(Min min, T val, Max max, const std::string_view msg)
 {
     if (min <= val && val < max) [[likely]]
