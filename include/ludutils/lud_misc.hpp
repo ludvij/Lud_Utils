@@ -51,10 +51,10 @@ concept slurpable_range = requires(RangeT) {
 
 // convenient functions
 
-template <slurpable_range R>
+template <slurpable_range R = std::string>
 R SlurpStream(std::istream& stream);
 
-template <slurpable_range R, typename T>
+template <slurpable_range R = std::string, typename T = const char*>
     requires std::same_as<const std::string&, T> ||
              std::same_as<const std::filesystem::path&, T> ||
              std::same_as<const char*, T>
