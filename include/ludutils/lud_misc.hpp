@@ -24,7 +24,6 @@ using s64 = int64_t;
 namespace Lud {
 
 // some usefull concepts
-
 template <typename RangeT, typename InnerT>
 concept range_of = requires(RangeT r, InnerT t) {
     requires std::ranges::range<RangeT>;

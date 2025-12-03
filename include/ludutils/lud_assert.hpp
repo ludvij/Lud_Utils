@@ -183,7 +183,7 @@ namespace Lud::_detail_ {
 template <typename... Args>
 inline void log_and_die(const std::source_location loc, std::string_view msg, std::string_view fmt, Args&&... args)
 {
-    std::println(std::cerr, "[ASSERT FAIL] : {}({}:{})", loc.file_name(), loc.line(), loc.column());
+    std::println(std::cerr, "[ASSERT FAIL] : \"{}({}:{})\"", loc.file_name(), loc.line(), loc.column());
     std::println(std::cerr, "        [WHY] : {}", std::vformat(fmt, std::make_format_args(args...)));
     if (!msg.empty())
     {

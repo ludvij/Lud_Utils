@@ -9,35 +9,46 @@
 #include <ranges>
 #include <string>
 #include <string_view>
-#include <utility>
 #include <vector>
 
 namespace Lud {
 
-template <typename T>
-concept NumberType = requires(T param) {
-    requires std::is_arithmetic_v<T>;
-    requires !std::is_same_v<bool, T>;
-    requires !std::is_pointer_v<T>;
+template <typename TypeT>
+concept NumberType = requires {
+    requires std::is_arithmetic_v<TypeT>;
+    requires !std::is_pointer_v<TypeT>;
+    requires !std::same_as<bool, TypeT>;
 };
-template <typename T>
-concept IntegerType = requires(T param) {
-    requires std::is_integral_v<T>;
-    requires !std::is_pointer_v<T>;
-    requires !std::is_same_v<bool, T>;
+template <typename TypeT>
+concept IntegerType = requires {
+    requires std::is_integral_v<TypeT>;
+    requires !std::is_pointer_v<TypeT>;
+    requires !std::same_as<bool, TypeT>;
 };
 
 template <typename T>
-concept RealType = requires(T param) {
+concept RealType = requires {
     requires std::is_floating_point_v<T>;
     requires !std::is_pointer_v<T>;
-    requires !std::is_same_v<bool, T>;
+    requires !std::same_as<bool, T>;
 };
 
-template <typename Range>
-concept string_container = requires(Range rng) {
-    requires std::ranges::range<Range>;
-    requires std::convertible_to<std::ranges::range_value_t<Range>, std::string_view>;
+template <typename RangeT>
+concept string_container = requires(RangeT rng) {
+    requires std::ranges::range<RangeT>;
+    requires std::convertible_to<std::ranges::range_value_t<RangeT>, std::string_view>;
+};
+
+template <typename RangeT>
+concept range_of_string = requires(RangeT r) {
+    requires std::ranges::range<RangeT>;
+    requires std::same_as<std::ranges::range_value_t<RangeT>, std::string>;
+};
+
+template <typename RangeT>
+concept range_of_string_view = requires(RangeT r) {
+    requires std::ranges::range<RangeT>;
+    requires std::same_as<std::ranges::range_value_t<RangeT>, std::string_view>;
 };
 
 template <IntegerType N>
@@ -50,10 +61,10 @@ std::optional<N> is_fraction(const std::string_view sv);
 template <RealType N>
 std::optional<N> is_percentage(const std::string_view sv);
 
-template <string_container R = std::vector<std::string>>
+template <range_of_string_view R = std::vector<std::string_view>>
 R Split(const std::string_view str, const std::string_view delim, size_t n = 0);
 
-template <string_container R = std::vector<std::string>>
+template <range_of_string_view R = std::vector<std::string_view>>
 R Split(const std::string_view str, char delim, size_t n = 0);
 
 template <string_container Container>
@@ -130,27 +141,27 @@ template <Lud::IntegerType N>
 std::optional<N> Lud::is_num(const std::string_view sv, int base /*=10*/)
 {
     // house keeping since from chars does not recognize leading plus sign and leading whitespace
-    auto check = ToUpper(Strip(sv));
-    inplace::RemovePrefix(check, "+");
-    switch (base)
-    {
-    case 16:
-        inplace::RemovePrefix(check, "0X");
-        break;
-    case 2:
-        inplace::RemovePrefix(check, "0B");
-        break;
-    case 8:
-        inplace::RemovePrefix(check, "0O");
-        inplace::RemovePrefix(check, "0");
-        break;
-    default:
-        break;
-    }
+    // auto check = ToUpper(Strip(sv));
+    // inplace::RemovePrefix(check, "+");
+    // switch (base)
+    // {
+    // case 16:
+    //     inplace::RemovePrefix(check, "0X");
+    //     break;
+    // case 2:
+    //     inplace::RemovePrefix(check, "0B");
+    //     break;
+    // case 8:
+    //     inplace::RemovePrefix(check, "0O");
+    //     inplace::RemovePrefix(check, "0");
+    //     break;
+    // default:
+    //     break;
+    // }
 
     N val{};
-    const auto first = check.data();
-    const auto last = first + check.size();
+    const auto first = sv.data();
+    const auto last = first + sv.size();
     const auto res = std::from_chars(first, last, val, base);
     if (res.ec == std::errc::invalid_argument || res.ec == std::errc::result_out_of_range)
     {
@@ -166,19 +177,19 @@ std::optional<N> Lud::is_num(const std::string_view sv, int base /*=10*/)
 template <Lud::RealType N>
 std::optional<N> Lud::is_num(const std::string_view sv, const std::chars_format fmt /*=std::chars_format::general)*/)
 {
-    auto check = ToUpper(Strip(sv));
-    if (std::to_underlying(fmt) & std::to_underlying(std::chars_format::hex))
-    {
-        inplace::RemovePrefix(check, "0X");
-    }
-    else
-    {
-        inplace::RemovePrefix(check, "+");
-    }
+    // auto check = ToUpper(Strip(sv));
+    // if (std::to_underlying(fmt) & std::to_underlying(std::chars_format::hex))
+    // {
+    //     inplace::RemovePrefix(check, "0X");
+    // }
+    // else
+    // {
+    //     inplace::RemovePrefix(check, "+");
+    // }
 
     N val{};
-    const auto first = check.data();
-    const auto last = first + check.size();
+    const auto first = sv.data();
+    const auto last = first + sv.size();
     const auto res = std::from_chars(first, last, val, fmt);
     if (res.ec == std::errc::invalid_argument || res.ec == std::errc::result_out_of_range)
     {
@@ -326,13 +337,13 @@ inline std::string& Lud::inplace::RemoveSuffix(std::string& str, const std::stri
     return str;
 }
 
-template <Lud::string_container R>
+template <Lud::range_of_string_view R>
 R Lud::Split(const std::string_view str, const std::string_view delim, size_t n)
 {
     R r;
     if (delim.empty())
     {
-        std::inserter(r, r.end()) = std::string{str};
+        std::inserter(r, r.end()) = str;
         return r;
     }
     size_t next = str.find(delim);
@@ -342,19 +353,19 @@ R Lud::Split(const std::string_view str, const std::string_view delim, size_t n)
         // skips empty
         if (next != 0)
         {
-            std::inserter(r, r.end()) = std::string{inner_str.substr(0, next)};
+            std::inserter(r, r.end()) = inner_str.substr(0, next);
         }
         inner_str.remove_prefix(next + delim.size());
         next = inner_str.find(delim);
     }
     if (!inner_str.empty())
     {
-        std::inserter(r, r.end()) = std::string{inner_str};
+        std::inserter(r, r.end()) = inner_str;
     }
 
     return r;
 }
-template <Lud::string_container R>
+template <Lud::range_of_string_view R>
 R Lud::Split(const std::string_view str, char delim, size_t n)
 {
     R r;
@@ -365,14 +376,14 @@ R Lud::Split(const std::string_view str, char delim, size_t n)
         // skips empty
         if (next != 0)
         {
-            std::inserter(r, r.end()) = std::string{inner_str.substr(0, next)};
+            std::inserter(r, r.end()) = inner_str.substr(0, next);
         }
         inner_str.remove_prefix(next + 1);
         next = inner_str.find(delim);
     }
     if (!inner_str.empty())
     {
-        std::inserter(r, r.end()) = std::string{inner_str};
+        std::inserter(r, r.end()) = inner_str;
     }
 
     return r;
