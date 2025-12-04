@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
+#include <ios>
 #include <iterator>
 #include <ranges>
 #include <vector>
@@ -58,7 +59,7 @@ template <slurpable_range R = std::string, typename T = const char*>
     requires std::same_as<const std::string&, T> ||
              std::same_as<const std::filesystem::path&, T> ||
              std::same_as<const char*, T>
-R Slurp(T path);
+R Slurp(T path, std::ios_base::openmode = std::ios::binary);
 
 } // namespace Lud
 
@@ -79,14 +80,7 @@ R SlurpStream(std::istream& stream)
 
     stream.read(reinterpret_cast<char*>(vec.data()), size);
 
-    if constexpr (std::same_as<R, std::vector<InnerT>>)
-    {
-        return vec;
-    }
-    else
-    {
-        return R{vec.begin(), vec.end()};
-    }
+    return R{vec.begin(), vec.end()};
 }
 
 template <>
@@ -109,9 +103,9 @@ template <slurpable_range R, typename T>
     requires std::same_as<const std::string&, T> ||
              std::same_as<const std::filesystem::path&, T> ||
              std::same_as<const char*, T>
-R Slurp(T path)
+R Slurp(T path, std::ios_base::openmode mode)
 {
-    std::ifstream file(path);
+    std::ifstream file(path, mode);
 
     if (!file)
     {
