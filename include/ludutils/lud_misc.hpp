@@ -106,6 +106,7 @@ template <slurpable_range R, typename T>
 R Slurp(T path, std::ios_base::openmode mode)
 {
     std::ifstream file(path, mode);
+    file.exceptions(std::ios::badbit);
 
     if (!file)
     {
