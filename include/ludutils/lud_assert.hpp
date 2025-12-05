@@ -107,52 +107,52 @@ void range(Min min, T val, Max max, const std::string_view msg = "val is not in 
         #include <builtins.h>
         #define PSNIP_TRAP() __trap(42)
     #elif defined(__DMC__) && defined(_M_IX86)
-void PSNIP_TRAP()
+inline void PSNIP_TRAP(void)
 {
     __asm int 3h;
 }
     #elif defined(__i386__) || defined(__x86_64__)
-void PSNIP_TRAP()
+inline void PSNIP_TRAP(void)
 {
     __asm__ __volatile__("int3");
 }
     #elif defined(__thumb__)
-void PSNIP_TRAP()
+inline void PSNIP_TRAP(void)
 {
     __asm__ __volatile__(".inst 0xde01");
 }
     #elif defined(__aarch64__)
-void PSNIP_TRAP()
+inline void PSNIP_TRAP(void)
 {
     __asm__ __volatile__(".inst 0xd4200000");
 }
     #elif defined(__arm__)
-void PSNIP_TRAP()
+inline void PSNIP_TRAP(void)
 {
     __asm__ __volatile__(".inst 0xe7f001f0");
 }
     #elif defined(__alpha__) && !defined(__osf__)
-void PSNIP_TRAP()
+inline void PSNIP_TRAP(void)
 {
     __asm__ __volatile__("bpt");
 }
     #elif defined(_54_)
-void PSNIP_TRAP()
+inline void PSNIP_TRAP(void)
 {
     __asm__ __volatile__("ESTOP");
 }
     #elif defined(_55_)
-void PSNIP_TRAP()
+inline void PSNIP_TRAP(void)
 {
     __asm__ __volatile__(";\n .if (.MNEMONIC)\n ESTOP_1\n .else\n ESTOP_1()\n .endif\n NOP");
 }
     #elif defined(_64P_)
-void PSNIP_TRAP()
+inline void PSNIP_TRAP(void)
 {
     __asm__ __volatile__("SWBP 0");
 }
     #elif defined(_6x_)
-void PSNIP_TRAP()
+inline void PSNIP_TRAP(void)
 {
     __asm__ __volatile__("NOP\n .word 0x10000000");
 }
