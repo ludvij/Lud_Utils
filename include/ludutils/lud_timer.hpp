@@ -1,0 +1,104 @@
+#ifndef LUD_TIME_HEADER
+#define LUD_TIME_HEADER
+
+#include <chrono>
+#include <format>
+#include <print>
+
+namespace Lud {
+class Timer
+{
+    using ClockT = std::chrono::steady_clock;
+
+    using uT = std::chrono::microseconds;
+    using nT = std::chrono::nanoseconds;
+    using mT = std::chrono::milliseconds;
+
+public:
+    Timer(const std::string_view name = "", bool start = true);
+    virtual ~Timer();
+
+    Timer(const Timer&) = delete;
+    Timer& operator=(const Timer&) = delete;
+    Timer(Timer&&) = delete;
+    Timer& operator=(Timer&&) = delete;
+
+    void Stop();
+
+    void Start();
+
+    virtual std::string ToString() const;
+
+    template <typename DurationT = uT>
+    operator DurationT() const
+    {
+        return std::chrono::duration_cast<DurationT>(m_total);
+    }
+
+protected:
+    std::string m_name;
+    std::chrono::time_point<ClockT> m_begin;
+
+    uT m_total{};
+
+    bool m_running;
+};
+} // namespace Lud
+
+// IMPLEMENTATION
+namespace Lud {
+
+Timer::Timer(std::string_view name, bool start)
+    : m_name(name)
+    , m_running(start)
+{
+    if (start) [[likely]]
+    {
+        m_begin = ClockT::now();
+    }
+}
+
+Timer::~Timer()
+{
+    if (m_running)
+    {
+        Stop();
+        std::println("{}", this->ToString());
+    }
+}
+
+void Timer::Stop()
+{
+
+    if (m_running) [[likely]]
+    {
+        auto end = ClockT::now();
+        auto difference = end - m_begin;
+        m_total += std::chrono::duration_cast<uT>(difference);
+        m_running = false;
+    }
+}
+
+void Timer::Start()
+{
+    if (!m_running) [[likely]]
+    {
+        m_running = true;
+        m_begin = ClockT::now();
+    }
+}
+
+std::string Timer::ToString() const
+{
+    std::string result;
+    if (!m_name.empty())
+    {
+        std::format_to(std::back_inserter(result), "[TIMER] : {}\n", m_name);
+    }
+    std::format_to(std::back_inserter(result), "   elapsed: {}", m_total);
+    return result;
+}
+
+} // namespace Lud
+
+#endif //! LUD_TIME_HEADER
