@@ -79,9 +79,9 @@ std::string Join(T first, T last, const std::string_view delim);
 template <std::input_iterator T>
 std::string Join(T first, T last, char delim);
 
-std::string RemovePrefix(const std::string_view str, const std::string_view prefix);
+std::string_view RemovePrefix(const std::string_view str, const std::string_view prefix);
 
-std::string RemoveSuffix(const std::string_view str, const std::string_view suffix);
+std::string_view RemoveSuffix(const std::string_view str, const std::string_view suffix);
 
 std::string ToUpper(const std::string_view str);
 
@@ -91,11 +91,11 @@ std::string ToTitle(const std::string_view str);
 
 std::string Capitalize(const std::string_view str);
 
-std::string LStrip(const std::string_view str);
+std::string_view LStrip(const std::string_view str);
 
-std::string RStrip(const std::string_view str);
+std::string_view RStrip(const std::string_view str);
 
-std::string Strip(const std::string_view str);
+std::string_view Strip(const std::string_view str);
 
 std::string Reverse(const std::string_view str);
 
@@ -106,6 +106,8 @@ std::string Replace(const std::string_view str, char pattern, char replacement);
 bool ContainsAny(const std::string_view str, const std::string_view pattern);
 
 bool ContainsAll(const std::string_view str, const std::string_view pattern);
+
+bool IsBlank(const std::string_view str);
 
 namespace inplace {
 std::string& RemovePrefix(std::string& str, const std::string_view prefix);
@@ -141,7 +143,7 @@ template <Lud::IntegerType N>
 std::optional<N> Lud::is_num(const std::string_view sv, int base /*=10*/)
 {
     // house keeping since from chars does not recognize leading plus sign and leading whitespace
-    // auto check = ToUpper(Strip(sv));
+    auto check = Strip(sv);
     // inplace::RemovePrefix(check, "+");
     // switch (base)
     // {
@@ -160,8 +162,8 @@ std::optional<N> Lud::is_num(const std::string_view sv, int base /*=10*/)
     // }
 
     N val{};
-    const auto first = sv.data();
-    const auto last = first + sv.size();
+    const auto first = check.data();
+    const auto last = first + check.size();
     const auto res = std::from_chars(first, last, val, base);
     if (res.ec == std::errc::invalid_argument || res.ec == std::errc::result_out_of_range)
     {
@@ -177,7 +179,7 @@ std::optional<N> Lud::is_num(const std::string_view sv, int base /*=10*/)
 template <Lud::RealType N>
 std::optional<N> Lud::is_num(const std::string_view sv, const std::chars_format fmt /*=std::chars_format::general)*/)
 {
-    // auto check = ToUpper(Strip(sv));
+    auto check = Strip(sv);
     // if (std::to_underlying(fmt) & std::to_underlying(std::chars_format::hex))
     // {
     //     inplace::RemovePrefix(check, "0X");
@@ -188,8 +190,8 @@ std::optional<N> Lud::is_num(const std::string_view sv, const std::chars_format 
     // }
 
     N val{};
-    const auto first = sv.data();
-    const auto last = first + sv.size();
+    const auto first = check.data();
+    const auto last = first + check.size();
     const auto res = std::from_chars(first, last, val, fmt);
     if (res.ec == std::errc::invalid_argument || res.ec == std::errc::result_out_of_range)
     {
@@ -239,9 +241,7 @@ std::optional<N> Lud::is_percentage(const std::string_view sv)
         return std::nullopt;
     }
 
-    Lud::inplace::RemoveSuffix(check, "%");
-
-    auto num = Lud::is_num<N>(check);
+    auto num = Lud::is_num<N>(Lud::RemoveSuffix(check, "%"));
     if (!num)
     {
         return std::nullopt;
@@ -298,25 +298,25 @@ std::string Lud::Join(T first, T last, char delim)
     return res;
 }
 
-inline std::string Lud::RemovePrefix(const std::string_view str, const std::string_view prefix)
+inline std::string_view Lud::RemovePrefix(const std::string_view str, const std::string_view prefix)
 {
 
     if (str.starts_with(prefix))
     {
-        return std::string(str.substr(prefix.size()));
+        return str.substr(prefix.size());
     }
 
-    return std::string(str);
+    return str;
 }
 
-inline std::string Lud::RemoveSuffix(const std::string_view str, const std::string_view suffix)
+inline std::string_view Lud::RemoveSuffix(const std::string_view str, const std::string_view suffix)
 {
     if (str.ends_with(suffix))
     {
-        return std::string(str.substr(0, str.size() - suffix.size()));
+        return str.substr(0, str.size() - suffix.size());
     }
 
-    return std::string(str);
+    return str;
 }
 
 inline std::string& Lud::inplace::RemovePrefix(std::string& str, const std::string_view prefix)
@@ -425,39 +425,35 @@ inline std::string Lud::Capitalize(const std::string_view str)
     return res;
 }
 
-inline std::string Lud::LStrip(const std::string_view str)
+inline std::string_view Lud::LStrip(const std::string_view str)
 {
     const auto delims = "\t\n\r ";
     const auto idx = str.find_first_not_of(delims);
 
-    if (idx == std::string::npos)
+    if (idx == std::string_view::npos)
     {
         return {};
     }
 
-    return std::string(str.substr(idx));
+    return str.substr(idx);
 }
 
-inline std::string Lud::RStrip(const std::string_view str)
+inline std::string_view Lud::RStrip(const std::string_view str)
 {
     const auto delims = "\t\n\r ";
     const auto idx = str.find_last_not_of(delims);
 
-    if (idx == std::string::npos)
+    if (idx == std::string_view::npos)
     {
         return {};
     }
 
-    return std::string(str.substr(0, idx + 1));
+    return str.substr(0, idx + 1);
 }
 
-inline std::string Lud::Strip(const std::string_view str)
+inline std::string_view Lud::Strip(const std::string_view str)
 {
-    std::string res(str);
-
-    inplace::Strip(res);
-
-    return res;
+    return Lud::LStrip(Lud::RStrip(str));
 }
 
 inline std::string Lud::Reverse(const std::string_view str)
@@ -504,6 +500,14 @@ inline bool Lud::ContainsAll(const std::string_view str, const std::string_view 
         }
     }
     return false;
+}
+
+inline bool Lud::IsBlank(const std::string_view str)
+{
+    const auto delims = "\t\n\r ";
+    const auto idx = str.find_last_not_of(delims);
+
+    return idx == std::string_view::npos;
 }
 
 inline std::string& Lud::inplace::ToUpper(std::string& str)

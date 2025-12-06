@@ -578,7 +578,7 @@ TEST_CASE("Is Num integer", "[parse][numbers][integer]")
 {
     SECTION("Simple")
     {
-        REQUIRE(Lud::is_num<int>("+23").value() == 23);
+        REQUIRE(!Lud::is_num<int>("+23"));
         REQUIRE(Lud::is_num<short>("0").value() == 0);
         REQUIRE(Lud::is_num<long>("-1").value() == -1);
     }
@@ -603,16 +603,15 @@ TEST_CASE("Is Num integer", "[parse][numbers][integer]")
 
     SECTION("Different base")
     {
-        REQUIRE(Lud::is_num<uint8_t>("0xFF", 16).value() == 255);
-        REQUIRE(Lud::is_num<uint8_t>("0XFF", 16).value() == 255);
+        REQUIRE(!Lud::is_num<uint8_t>("0xFF", 16));
         REQUIRE(Lud::is_num<uint8_t>("  FF", 16).value() == 255);
 
-        REQUIRE(Lud::is_num<uint8_t>("0b11111111", 2).value() == 255);
-        REQUIRE(Lud::is_num<uint8_t>("0B11111111", 2).value() == 255);
+        REQUIRE(!Lud::is_num<uint8_t>("0b11111111", 2));
+        REQUIRE(!Lud::is_num<uint8_t>("0B11111111", 2));
         REQUIRE(Lud::is_num<uint8_t>("  11111111", 2).value() == 255);
 
-        REQUIRE(Lud::is_num<uint8_t>("0o377", 8).value() == 255);
-        REQUIRE(Lud::is_num<uint8_t>("0O377", 8).value() == 255);
+        REQUIRE(!Lud::is_num<uint8_t>("0o377", 8));
+        REQUIRE(!Lud::is_num<uint8_t>("0O377", 8));
         REQUIRE(Lud::is_num<uint8_t>(" 0377", 8).value() == 255);
         REQUIRE(Lud::is_num<uint8_t>("  377", 8).value() == 255);
     }
@@ -634,8 +633,7 @@ TEST_CASE("IS Num Real", "[parse][numbers][real]")
 
     SECTION("Different fmt")
     {
-        REQUIRE(Lud::is_num<float>("0xFF", std::chars_format::hex).value() == 255.f);
-        REQUIRE(Lud::is_num<float>("0XFF", std::chars_format::hex).value() == 255.f);
+        REQUIRE(!Lud::is_num<float>("0XFF", std::chars_format::hex));
         REQUIRE(Lud::is_num<float>("  FF", std::chars_format::hex).value() == 255.f);
 
         REQUIRE(Lud::is_num<float>("1e4", std::chars_format::scientific).value() == 1e4f);
