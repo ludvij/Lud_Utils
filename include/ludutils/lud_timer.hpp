@@ -63,8 +63,8 @@ Timer::~Timer()
     if (m_running)
     {
         Stop();
-        std::println("{}", this->ToString());
     }
+    std::println("{}", this->ToString());
 }
 
 void Timer::Stop()

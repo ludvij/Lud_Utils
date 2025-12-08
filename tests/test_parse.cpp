@@ -616,7 +616,7 @@ TEST_CASE("Is Num integer", "[parse][numbers][integer]")
         REQUIRE(Lud::is_num<uint8_t>("  377", 8).value() == 255);
     }
 }
-TEST_CASE("IS Num Real", "[parse][numbers][real]")
+TEST_CASE("Is Num Real", "[parse][numbers][real]")
 {
     SECTION("Simple")
     {

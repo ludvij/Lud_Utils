@@ -50,6 +50,20 @@ concept slurpable_range = requires(RangeT) {
     requires insertable_range<RangeT, std::ranges::range_value_t<RangeT>>;
 };
 
+template <typename CollectionT>
+concept sized_collection = requires(CollectionT c) {
+    { c.size() } -> std::same_as<size_t>;
+};
+
+template <sized_collection CollectionT>
+struct as_size
+{
+    size_t operator()(const CollectionT& c) const
+    {
+        return c.size();
+    }
+};
+
 // convenient functions
 
 template <slurpable_range R = std::string>

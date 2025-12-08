@@ -14,20 +14,20 @@
 namespace Lud {
 
 template <typename TypeT>
-concept NumberType = requires {
+concept number_type = requires {
     requires std::is_arithmetic_v<TypeT>;
     requires !std::is_pointer_v<TypeT>;
     requires !std::same_as<bool, TypeT>;
 };
 template <typename TypeT>
-concept IntegerType = requires {
+concept integer_type = requires {
     requires std::is_integral_v<TypeT>;
     requires !std::is_pointer_v<TypeT>;
     requires !std::same_as<bool, TypeT>;
 };
 
 template <typename T>
-concept RealType = requires {
+concept real_type = requires {
     requires std::is_floating_point_v<T>;
     requires !std::is_pointer_v<T>;
     requires !std::same_as<bool, T>;
@@ -51,14 +51,14 @@ concept range_of_string_view = requires(RangeT r) {
     requires std::same_as<std::ranges::range_value_t<RangeT>, std::string_view>;
 };
 
-template <IntegerType N>
+template <integer_type N>
 std::optional<N> is_num(const std::string_view sv, int base = 10);
-template <RealType N>
+template <real_type N>
 std::optional<N> is_num(const std::string_view sv, std::chars_format fmt = std::chars_format::general);
 
-template <RealType N>
+template <real_type N>
 std::optional<N> is_fraction(const std::string_view sv);
-template <RealType N>
+template <real_type N>
 std::optional<N> is_percentage(const std::string_view sv);
 
 template <range_of_string_view R = std::vector<std::string_view>>
@@ -139,7 +139,7 @@ std::string& Replace(std::string& str, char pattern, char replacement);
 
 // implementation==============================================================================
 
-template <Lud::IntegerType N>
+template <Lud::integer_type N>
 std::optional<N> Lud::is_num(const std::string_view sv, int base /*=10*/)
 {
     // house keeping since from chars does not recognize leading plus sign and leading whitespace
@@ -176,7 +176,7 @@ std::optional<N> Lud::is_num(const std::string_view sv, int base /*=10*/)
     return val;
 }
 
-template <Lud::RealType N>
+template <Lud::real_type N>
 std::optional<N> Lud::is_num(const std::string_view sv, const std::chars_format fmt /*=std::chars_format::general)*/)
 {
     auto check = Strip(sv);
@@ -204,7 +204,7 @@ std::optional<N> Lud::is_num(const std::string_view sv, const std::chars_format 
     return val;
 }
 
-template <Lud::RealType N>
+template <Lud::real_type N>
 std::optional<N> Lud::is_fraction(const std::string_view sv)
 {
     if (!sv.contains("/"))
@@ -231,7 +231,7 @@ std::optional<N> Lud::is_fraction(const std::string_view sv)
     return numerator.value() / denominator.value();
 }
 
-template <Lud::RealType N>
+template <Lud::real_type N>
 std::optional<N> Lud::is_percentage(const std::string_view sv)
 {
     auto check = Lud::Strip(sv);
@@ -453,7 +453,15 @@ inline std::string_view Lud::RStrip(const std::string_view str)
 
 inline std::string_view Lud::Strip(const std::string_view str)
 {
-    return Lud::LStrip(Lud::RStrip(str));
+    constexpr auto delims = "\t\n\r ";
+    const size_t begin = str.find_first_not_of(delims);
+    const size_t end = str.find_last_not_of(delims);
+    if (begin == std::string_view::npos)
+    {
+        return {};
+    }
+
+    return str.substr(begin, end - begin + 1);
 }
 
 inline std::string Lud::Reverse(const std::string_view str)
