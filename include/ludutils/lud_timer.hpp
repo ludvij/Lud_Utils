@@ -10,9 +10,9 @@ class Timer
 {
     using ClockT = std::chrono::steady_clock;
 
-    using uT = std::chrono::microseconds;
-    using nT = std::chrono::nanoseconds;
-    using mT = std::chrono::milliseconds;
+    using uT = std::chrono::duration<double, std::micro>;
+    using mT = std::chrono::duration<double, std::milli>;
+    using sT = std::chrono::duration<double, std::deci>;
 
 public:
     Timer(const std::string_view name = "", bool start = true);
@@ -63,8 +63,8 @@ Timer::~Timer()
     if (m_running)
     {
         Stop();
+        std::println("{}", this->ToString());
     }
-    std::println("{}", this->ToString());
 }
 
 void Timer::Stop()
@@ -90,12 +90,26 @@ void Timer::Start()
 
 std::string Timer::ToString() const
 {
+    using namespace std::chrono_literals;
     std::string result;
     if (!m_name.empty())
     {
         std::format_to(std::back_inserter(result), "[TIMER] : {}\n", m_name);
     }
-    std::format_to(std::back_inserter(result), "   elapsed: {}", m_total);
+    if (m_total > 1s)
+    {
+        auto st = std::chrono::duration_cast<sT>(m_total);
+        std::format_to(std::back_inserter(result), "   elapsed: {}", st);
+    }
+    if (m_total > 1ms)
+    {
+        auto mt = std::chrono::duration_cast<mT>(m_total);
+        std::format_to(std::back_inserter(result), "   elapsed: {}", mt);
+    }
+    else
+    {
+        std::format_to(std::back_inserter(result), "   elapsed: {}", m_total);
+    }
     return result;
 }
 
