@@ -2,6 +2,7 @@
 #define LUD_MISC_HEADER
 
 #include <concepts>
+#include <cstddef>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
