@@ -12,7 +12,7 @@ class Timer
 
     using uT = std::chrono::duration<double, std::micro>;
     using mT = std::chrono::duration<double, std::milli>;
-    using sT = std::chrono::duration<double, std::deci>;
+    using sT = std::chrono::duration<double, std::ratio<1, 1>>;
 
 public:
     Timer(const std::string_view name = "", bool start = true);
@@ -101,7 +101,7 @@ std::string Timer::ToString() const
         auto st = std::chrono::duration_cast<sT>(m_total);
         std::format_to(std::back_inserter(result), "   elapsed: {}", st);
     }
-    if (m_total > 1ms)
+    else if (m_total > 1ms)
     {
         auto mt = std::chrono::duration_cast<mT>(m_total);
         std::format_to(std::back_inserter(result), "   elapsed: {}", mt);

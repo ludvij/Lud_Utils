@@ -56,6 +56,36 @@ std::optional<N> is_num(const std::string_view sv, int base = 10);
 template <real_type N>
 std::optional<N> is_num(const std::string_view sv, std::chars_format fmt = std::chars_format::general);
 
+/**
+ * @brief to be used as functor in range transform or something like that
+ *
+ * @tparam N integer type
+ * @tparam BaseT base of the parse
+ */
+template <integer_type N, int BaseT = 10>
+struct parse_integer
+{
+    N operator()(const std::string_view sv) const
+    {
+        return Lud::is_num<N>(sv, BaseT).value();
+    }
+};
+
+/**
+ * @brief to be used as functor in range transform or something like that
+ *
+ * @tparam N real type
+ * @tparam FmtT format of the parse
+ */
+template <real_type N, std::chars_format FmtT = std::chars_format::general>
+struct parse_real
+{
+    N operator()(const std::string_view sv) const
+    {
+        return Lud::is_num<N>(sv, FmtT).value();
+    }
+};
+
 template <real_type N>
 std::optional<N> is_fraction(const std::string_view sv);
 template <real_type N>

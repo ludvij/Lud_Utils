@@ -76,6 +76,21 @@ template <slurpable_range R = std::string, typename T = const char*>
              std::same_as<const char*, T>
 R Slurp(T path, std::ios_base::openmode = std::ios::binary);
 
+/**
+ * @brief to be used as a functor inside a range transform or something like that
+ *
+ * @tparam T object to be constructed
+ */
+template <typename T>
+struct constructor
+{
+    template <typename... Args>
+    T operator()(Args&&... args)
+    {
+        return T(std::forward<Args>(args)...);
+    }
+};
+
 } // namespace Lud
 
 // IMPLEMENTATION
