@@ -76,20 +76,9 @@ template <slurpable_range R = std::string, typename T = const char*>
              std::same_as<const char*, T>
 R Slurp(T path, std::ios_base::openmode = std::ios::binary);
 
-/**
- * @brief to be used as a functor inside a range transform or something like that
- *
- * @tparam T object to be constructed
- */
-template <typename T>
-struct constructor
-{
-    template <typename... Args>
-    T operator()(Args&&... args)
-    {
-        return T(std::forward<Args>(args)...);
-    }
-};
+template <std::ranges::input_range RangeT, typename T = std::ranges::range_value_t<RangeT>>
+    requires std::same_as<T, std::ranges::range_value_t<RangeT>>
+std::vector<std::vector<T>> combinations(const RangeT& r);
 
 } // namespace Lud
 
@@ -144,6 +133,27 @@ R Slurp(T path, std::ios_base::openmode mode)
     }
 
     return SlurpStream<R>(file);
+}
+
+template <std::ranges::input_range RangeT, typename T>
+    requires std::same_as<T, std::ranges::range_value_t<RangeT>>
+std::vector<std::vector<T>> combinations(const RangeT& r)
+{
+    std::vector<std::vector<T>> res;
+
+    res.reserve((1 << r.size()) - 1);
+
+    for (const auto& elem : r)
+    {
+        for (auto set : res)
+        {
+            set.push_back(elem);
+            res.emplace_back(set);
+        }
+        res.emplace_back(std::vector<T>{elem});
+    }
+    res.emplace_back();
+    return res;
 }
 
 } // namespace Lud
