@@ -10,11 +10,11 @@ class Timer
 {
     using ClockT = std::chrono::steady_clock;
 
+public:
     using uT = std::chrono::duration<double, std::micro>;
     using mT = std::chrono::duration<double, std::milli>;
     using sT = std::chrono::duration<double, std::ratio<1, 1>>;
 
-public:
     Timer(const std::string_view name = "", bool start = true);
     virtual ~Timer();
 
@@ -25,15 +25,13 @@ public:
 
     void Stop();
 
-    void Start();
+    void Start() noexcept;
 
     virtual std::string ToString() const;
 
-    template <typename DurationT = uT>
-    operator DurationT() const
-    {
-        return std::chrono::duration_cast<DurationT>(m_total);
-    }
+    mT GetM() const noexcept { return std::chrono::duration_cast<mT>(m_total); }
+    uT GetU() const noexcept { return std::chrono::duration_cast<uT>(m_total); }
+    sT GetS() const noexcept { return std::chrono::duration_cast<sT>(m_total); }
 
 protected:
     std::string m_name;
@@ -79,7 +77,7 @@ void Timer::Stop()
     }
 }
 
-void Timer::Start()
+void Timer::Start() noexcept
 {
     if (!m_running) [[likely]]
     {
