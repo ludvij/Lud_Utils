@@ -15,7 +15,7 @@ public:
     using mT = std::chrono::duration<double, std::milli>;
     using sT = std::chrono::duration<double, std::ratio<1, 1>>;
 
-    Timer(const std::string_view name = "", bool start = true);
+    Timer(const std::string_view name = "", bool start = true) noexcept;
     virtual ~Timer();
 
     Timer(const Timer&) = delete;
@@ -29,8 +29,8 @@ public:
 
     virtual std::string ToString() const;
 
-    mT GetM() const noexcept { return std::chrono::duration_cast<mT>(m_total); }
-    uT GetU() const noexcept { return std::chrono::duration_cast<uT>(m_total); }
+    mT GetMs() const noexcept { return std::chrono::duration_cast<mT>(m_total); }
+    uT GetUs() const noexcept { return std::chrono::duration_cast<uT>(m_total); }
     sT GetS() const noexcept { return std::chrono::duration_cast<sT>(m_total); }
 
 protected:
@@ -46,7 +46,7 @@ protected:
 // IMPLEMENTATION
 namespace Lud {
 
-Timer::Timer(std::string_view name, bool start)
+Timer::Timer(std::string_view name, bool start) noexcept
     : m_name(name)
     , m_running(start)
 {

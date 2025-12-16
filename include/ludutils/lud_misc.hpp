@@ -9,6 +9,7 @@
 #include <ios>
 #include <iterator>
 #include <ranges>
+#include <type_traits>
 #include <vector>
 
 // more convenient ints
@@ -56,6 +57,11 @@ concept sized_collection = requires(CollectionT c) {
     { c.size() } -> std::same_as<size_t>;
 };
 
+/**
+ * @brief functor to be used to transform collection of collections to collection of size
+ *
+ * @tparam CollectionT type of the collection
+ */
 template <sized_collection CollectionT>
 struct as_size
 {
@@ -67,18 +73,53 @@ struct as_size
 
 // convenient functions
 
+/**
+ * @brief reads whole file from stream, will read from current stream position
+ *
+ * @tparam R range to return file in
+ * @param stream stream to read file from
+ * @return R range containing file
+ */
 template <slurpable_range R = std::string>
 R SlurpStream(std::istream& stream);
 
+/**
+ * @brief read whole file from path
+ *
+ * @tparam R range to return the file in
+ * @tparam T path type, must be string, char* or path
+ * @param path path to the file
+ * @return R range containing file
+ */
 template <slurpable_range R = std::string, typename T = const char*>
     requires std::same_as<const std::string&, T> ||
              std::same_as<const std::filesystem::path&, T> ||
              std::same_as<const char*, T>
 R Slurp(T path, std::ios_base::openmode = std::ios::binary);
 
+/**
+ * @brief Obtains the power set of a given range
+ *
+ * @tparam RangeT type of the range
+ * @tparam T inner type of the range
+ * @param r the range
+ * @return the power set in vector form
+ */
 template <std::ranges::input_range RangeT, typename T = std::ranges::range_value_t<RangeT>>
     requires std::same_as<T, std::ranges::range_value_t<RangeT>>
 std::vector<std::vector<T>> combinations(const RangeT& r);
+
+/**
+ * @brief somewhat good function for hashing a vector of integers
+ *
+ * @tparam T integer type
+ */
+template <typename T>
+    requires std::is_integral_v<T>
+struct HashNumericVector
+{
+    std::size_t operator()(const std::vector<T>& vec) const;
+};
 
 } // namespace Lud
 
@@ -154,6 +195,37 @@ std::vector<std::vector<T>> combinations(const RangeT& r)
     }
     res.emplace_back();
     return res;
+}
+
+template <typename T>
+    requires std::is_integral_v<T>
+std::size_t HashNumericVector<T>::operator()(const std::vector<T>& vec) const
+{
+    // https://stackoverflow.com/questions/20511347/a-good-hash-function-for-a-vector/72073933#72073933
+    std::size_t seed = vec.size();
+    for (auto x : vec)
+    {
+        x = (x ^ (x >> 16)) * 0x45d9f3bU;
+        x = (x ^ (x >> 16)) * 0x45d9f3bU;
+        x = (x ^ (x >> 16));
+        seed ^= x + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+    }
+    return seed;
+}
+
+template <>
+std::size_t HashNumericVector<u64>::operator()(const std::vector<u64>& vec) const
+{
+    // https://stackoverflow.com/questions/20511347/a-good-hash-function-for-a-vector/72073933#72073933
+    std::size_t seed = vec.size();
+    for (auto x : vec)
+    {
+        x = (x ^ (x >> 30)) * 0xbf58476d1ce4e5b9UL;
+        x = (x ^ (x >> 27)) * 0x94d049bb133111ebUL;
+        x = x ^ (x >> 31);
+        seed ^= x + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+    }
+    return seed;
 }
 
 } // namespace Lud
