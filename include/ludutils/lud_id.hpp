@@ -7,14 +7,13 @@
 #include <string>
 
 // right now this is only to trace lifetimes
-namespace Lud
-{
+namespace Lud {
 class UUID
 {
 public:
     UUID();
     UUID(const UUID& id);
-    UUID(const UUID&& id) noexcept;
+    UUID(UUID&& id) noexcept;
     ~UUID();
 
     std::strong_ordering operator<=>(const UUID& other) const = default;
@@ -45,10 +44,8 @@ struct std::formatter<Lud::uuid_t>
 
 // implementation
 #include <random>
-namespace Lud
-{
-namespace _detail_archive_
-{
+namespace Lud {
+namespace _detail_archive_ {
 
 static std::random_device rnd_dev;                   // NOLINT
 static std::mt19937_64 mt(rnd_dev());                // NOLINT
@@ -57,7 +54,8 @@ static std::uniform_int_distribution<uint64_t> dist; // NOLINT
 } // namespace _detail_archive_
 
 inline UUID::UUID()
-    : m_lo(_detail_archive_::dist(_detail_archive_::mt)), m_hi(_detail_archive_::dist(_detail_archive_::mt))
+    : m_lo(_detail_archive_::dist(_detail_archive_::mt))
+    , m_hi(_detail_archive_::dist(_detail_archive_::mt))
 {
 #ifdef LUD_TRACE_ID_LIFETIMES
     std::println(" Created UUID {{\033[38;5;46m{}\033[31;1;0m}}", *this);
@@ -65,7 +63,8 @@ inline UUID::UUID()
 }
 
 inline UUID::UUID(const UUID& id)
-    : m_lo(_detail_archive_::dist(_detail_archive_::mt)), m_hi(_detail_archive_::dist(_detail_archive_::mt))
+    : m_lo(_detail_archive_::dist(_detail_archive_::mt))
+    , m_hi(_detail_archive_::dist(_detail_archive_::mt))
 {
 #ifdef LUD_TRACE_ID_LIFETIMES
     std::println("  Copied UUID {{\033[38;5;46m{}\033[31;1;0m}}", id);
@@ -73,8 +72,9 @@ inline UUID::UUID(const UUID& id)
 #endif // LUD_TRACE_ID_LIFETIMES
 }
 
-inline UUID::UUID(const UUID&& id) noexcept
-    : m_lo(_detail_archive_::dist(_detail_archive_::mt)), m_hi(_detail_archive_::dist(_detail_archive_::mt))
+inline UUID::UUID(UUID&& id) noexcept
+    : m_lo(_detail_archive_::dist(_detail_archive_::mt))
+    , m_hi(_detail_archive_::dist(_detail_archive_::mt))
 {
 #ifdef LUD_TRACE_ID_LIFETIMES
     std::println("   Moved UUID {{\033[38;5;126m{}\033[31;1;0m}}", id);
@@ -91,12 +91,14 @@ inline UUID::~UUID()
 
 inline std::string to_string(const UUID& id)
 {
-    return std::format("{:08x}-{:04x}-{:04x}-{:04x}-{:012x}",
-                       (id.m_hi & 0xFFFF'FFFF'0000'0000) >> 32,
-                       (id.m_hi & 0x0000'0000'FFFF'0000) >> 16,
-                       (id.m_hi & 0x0000'0000'0000'FFFF) >> 0,
-                       (id.m_lo & 0xFFFF'0000'0000'0000) >> 48,
-                       (id.m_lo & 0x0000'FFFF'FFFF'FFFF) >> 0);
+    return std::format(
+        "{:08x}-{:04x}-{:04x}-{:04x}-{:012x}",
+        (id.m_hi & 0xFFFFFFFF00000000) >> 32,
+        (id.m_hi & 0x00000000FFFF0000) >> 16,
+        (id.m_hi & 0x000000000000FFFF) >> 0,
+        (id.m_lo & 0xFFFF000000000000) >> 48,
+        (id.m_lo & 0x0000FFFFFFFFFFFF) >> 0
+    );
 }
 
 } // namespace Lud

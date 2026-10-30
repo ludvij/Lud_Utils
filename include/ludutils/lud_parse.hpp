@@ -237,7 +237,7 @@ std::optional<N> Lud::is_num(const std::string_view sv, const std::chars_format 
 template <Lud::real_type N>
 std::optional<N> Lud::is_fraction(const std::string_view sv)
 {
-    if (!sv.contains("/"))
+    if (!sv.contains('/'))
     {
         return std::nullopt;
     }

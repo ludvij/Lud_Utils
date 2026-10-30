@@ -6,7 +6,6 @@
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
-#include <ios>
 #include <iterator>
 #include <ranges>
 #include <type_traits>
@@ -152,6 +151,11 @@ std::vector<uint8_t> SlurpStream(std::istream& stream)
     const auto size = stream.tellg();
     stream.seekg(original_pos);
 
+    if (!stream || size <= 0)
+    {
+        return {};
+    }
+
     std::vector<uint8_t> vec(size);
 
     stream.read(reinterpret_cast<char*>(vec.data()), size);
@@ -182,16 +186,17 @@ std::vector<std::vector<T>> combinations(const RangeT& r)
 {
     std::vector<std::vector<T>> res;
 
-    res.reserve((1 << r.size()) - 1);
+    res.reserve(1ULL << r.size());
 
     for (const auto& elem : r)
     {
-        for (auto set : res)
+        const size_t current_size = res.size();
+        for (size_t i = 0; i < current_size; ++i)
         {
+            auto set = res[i];
             set.push_back(elem);
-            res.emplace_back(set);
+            res.emplace_back(std::move(set));
         }
-        res.emplace_back(std::vector<T>{elem});
     }
     res.emplace_back();
     return res;

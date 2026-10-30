@@ -4,6 +4,8 @@ project(ludutils)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 
 option(LUDUTILS_TESTS "Enable tests project" OFF)
 
@@ -22,7 +24,6 @@ add_library(${PROJECT_NAME} INTERFACE)
 # this is just to make the files appear on IDEs
 target_sources(${PROJECT_NAME} PRIVATE ${HEADERS})
 
-target_compile_definitions(${PROJECT_NAME} INTERFACE CMAKE_EXPORT_COMPILE_COMMANDS=1)
 
 
 target_include_directories(${PROJECT_NAME} 
@@ -44,14 +45,14 @@ if (LUDUTILS_TESTS)
 	FetchContent_MakeAvailable(Catch2)
 
 
-	set(ludutil_test_dir ${CMAKE_CURRENT_LIST_DIR}/tests)
+	set(ludutils_test_dir ${CMAKE_CURRENT_LIST_DIR}/tests)
 
-	add_executable(LUDUTILS_TESTS)
-	target_sources(LUDUTILS_TESTS PRIVATE
-		${ludutil_test_dir}/test_parse.cpp
+	add_executable(ludutils_tests)
+	target_sources(ludutils_tests PRIVATE
+		${ludutils_test_dir}/test_parse.cpp
 	)
 
-	target_link_libraries(LUDUTILS_TESTS
+	target_link_libraries(ludutils_tests
 		PRIVATE ludutils
 		PRIVATE Catch2::Catch2WithMain
 	)

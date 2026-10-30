@@ -1,7 +1,5 @@
 #ifndef LUD_MEMORY_STREAM_HEADER
 #define LUD_MEMORY_STREAM_HEADER
-#include <ios>
-#include <istream>
 
 #include <cstdint>
 #include <iostream>
@@ -117,7 +115,7 @@ private:
 template <ByteType T>
 view_streambuf<T>::view_streambuf(std::span<const T> data)
 {
-    auto cs = std::bit_cast<char*>(data.data());
+    auto cs = reinterpret_cast<char*>(data.data());
     Base::setg(cs, cs, cs + data.size());
 }
 
@@ -306,6 +304,9 @@ vector_wrap_streambuf<T>::IntT vector_wrap_streambuf<T>::overflow(IntT ch)
         }
         m_buffer[pos] = static_cast<T>(ch);
         pbump(sizeof(CharT));
+        // this will be called twice in the rare case that
+        // the block size increase fails
+        Base::setg(Base::eback(), Base::gptr(), Base::pptr());
     }
     return TraitsT::not_eof(ch);
 }
@@ -330,7 +331,7 @@ vector_wrap_streambuf<T>::PosT vector_wrap_streambuf<T>::seekoff(OffT off, std::
     {
         return seekoff_put_area(off, dir, which);
     }
-    throw std::invalid_argument("which must be either std::ios::in or std::ios::out");
+    return TraitsT::eof();
 }
 
 template <ByteType T>
@@ -348,7 +349,7 @@ constexpr vector_wrap_streambuf<T>::PosT vector_wrap_streambuf<T>::seekoff_get_a
     {
         if (gptr() + off > egptr())
         {
-            throw std::range_error("get ptr offset out of bounds");
+            return TraitsT::eof();
         }
         Base::gbump(static_cast<int>(off));
         break;
@@ -357,7 +358,7 @@ constexpr vector_wrap_streambuf<T>::PosT vector_wrap_streambuf<T>::seekoff_get_a
     {
         if (off > 0 || static_cast<size_t>(-off) > get_get_area_size())
         {
-            throw std::range_error("get ptr offset out of bounds");
+            return TraitsT::eof();
         }
         Base::setg(Base::eback(), Base::egptr() + off, Base::egptr());
         break;
@@ -366,7 +367,7 @@ constexpr vector_wrap_streambuf<T>::PosT vector_wrap_streambuf<T>::seekoff_get_a
     {
         if (off < 0 || static_cast<size_t>(off) > get_get_area_size())
         {
-            throw std::range_error("get ptr offset out of bounds");
+            return TraitsT::eof();
         }
         Base::setg(Base::eback(), Base::eback() + off, Base::egptr());
         break;
@@ -384,7 +385,7 @@ constexpr vector_wrap_streambuf<T>::PosT vector_wrap_streambuf<T>::seekoff_put_a
     {
         if (off + Base::pptr() > Base::epptr())
         {
-            throw std::out_of_range("put ptr offset out of range");
+            return TraitsT::eof();
         }
         Base::pbump(static_cast<int>(off));
     }
@@ -392,7 +393,7 @@ constexpr vector_wrap_streambuf<T>::PosT vector_wrap_streambuf<T>::seekoff_put_a
     {
         if (off > 0 || static_cast<size_t>(-off) > get_put_area_size())
         {
-            throw std::range_error("put ptr offset out of range");
+            return TraitsT::eof();
         }
         Base::setp(Base::pbase(), Base::epptr());
         Base::pbump(m_buffer.capacity() + off);
@@ -401,7 +402,7 @@ constexpr vector_wrap_streambuf<T>::PosT vector_wrap_streambuf<T>::seekoff_put_a
     {
         if (off < 0 || static_cast<size_t>(off) > get_put_area_size())
         {
-            throw std::range_error("put ptr offset out of range");
+            return TraitsT::eof();
         }
         Base::setp(Base::pbase(), Base::epptr());
         Base::pbump(static_cast<int>(off));

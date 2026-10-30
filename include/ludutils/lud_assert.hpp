@@ -5,13 +5,14 @@
 #include <cstdlib>
 #include <fcntl.h>
 
+#include <format>
 #include <initializer_list>
 #include <iostream>
+#include <print>
+#include <source_location>
 #include <stdexcept>
 #include <string>
 #include <string_view>
-
-#include <source_location>
 
 namespace Lud::assert {
 
@@ -172,7 +173,7 @@ inline void PSNIP_TRAP(void)
     #define LUD_ASSERT_TRAP(x) Lud::assert::that(x);
 #else
     #define LUD_ASSERT_TRAP(x) \
-        if (!(x)) [[likely]]   \
+        if (!(x)) [[unlikely]] \
         {                      \
             PSNIP_TRAP();      \
         }
